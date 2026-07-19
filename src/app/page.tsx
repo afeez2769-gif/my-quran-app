@@ -16,16 +16,18 @@ export default function Home() {
       .catch(err => console.error(err));
   }, []);
 
-  // 2. Ambil Ayat (Tajwid Word-by-Word) + Terjemahan Malaysia
+  // 2. Ambil Ayat + Terjemahan Malaysia
   const handleSurahClick = (surah: any) => {
     setSelectedSurah(surah);
     setVerses([]);
     setTranslations([]);
     setLoadingVerses(true);
 
-    const fetchArabic = fetch(`https://api.quran.com/api/v4/verses/by_chapter/${surah.id}?language=ms&words=true&word_fields=code_v1`)
+    // Ambil data ayat standard untuk dapatkan susunan ayat
+    const fetchArabic = fetch(`https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=${surah.id}`)
       .then(res => res.json());
 
+    // Ambil Terjemahan Bahasa Melayu
     const fetchTranslation = fetch(`https://api.quran.com/api/v4/quran/translations/39?chapter_number=${surah.id}`)
       .then(res => res.json());
 
@@ -44,19 +46,6 @@ export default function Home() {
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* Memanggil FAIL FONT RASMI Tajwid QCF V1 & V2 dari server Quran.com supaya browser kenal kod warna tajwid */}
-      <style dangerouslySetInnerHTML={{__html: `
-        @font-face {
-          font-family: 'QuranFont';
-          src: url('https://quran.com/fonts/quran/hafs/v2/woff2/p1.woff2') format('woff2');
-        }
-        .tajweed-word {
-          font-family: 'QuranFont', serif;
-          font-size: 34px;
-          line-height: 2.5;
-          color: #0f172a;
-        }
-      `}} />
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
 
       <h1 
@@ -89,16 +78,23 @@ export default function Home() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               
-              {/* Paparan Bismillah Tulisan Cantik */}
+              {/* Paparan Bismillah Versi Imej Cantik dari Quran.com */}
               {selectedSurah.id !== 9 && (
-                <div style={{ textDirection: 'rtl', textAlign: 'center', fontSize: '36px', fontFamily: 'serif', padding: '20px 0', color: '#0f766e', direction: 'rtl' }}>
-                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+                  <img 
+                    src="https://quran.com/images/bismillah.svg" 
+                    alt="Bismillah" 
+                    style={{ width: '280px', height: 'auto', filter: 'invert(31%) sepia(45%) saturate(795%) hue-rotate(125deg) brightness(95%) contrast(92%)' }} 
+                  />
                 </div>
               )}
 
               {verses.map((verse: any, index: number) => {
                 const translationText = translations[index]?.text || "Terjemahan tidak ditemui.";
-                const verseNumber = verse.verse_number;
+                const verseNumber = verse.verse_key.split(':')[1];
+
+                // Membina URL imej tajwid rasmi untuk setiap ayat dari quran.com
+                const tajweedImageUrl = `https://cstatic.quran.com/images/tajweed/${selectedSurah.id}/${verseNumber}.png`;
 
                 return (
                   <div 
@@ -116,43 +112,31 @@ export default function Home() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ backgroundColor: '#ccfbf1', color: '#0f766e', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
-                        Ayat {selectedSurah.id}:{verseNumber}
+                        Ayat {verse.verse_key}
                       </span>
                     </div>
 
-                    {/* Paparan Ayat Tajwid Berwarna Perkataan demi Perkataan */}
-                    <div 
-                      dir="rtl" 
-                      className="tajweed-word"
-                      style={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
-                        rowGap: '15px', 
-                        columnGap: '8px', 
-                        justifyContent: 'flex-start',
-                        alignItems: 'center',
-                        direction: 'rtl',
-                        textAlign: 'right'
-                      }}
-                    >
-                      {verse.words?.map((word: any) => {
-                        // Memaparkan kod font tajwid jika wujud
-                        if (word.code_v1) {
-                          return (
-                            <span 
-                              key={word.id} 
-                              dangerouslySetInnerHTML={{ __html: word.code_v1 }}
-                              style={{ display: 'inline-block' }}
-                            />
-                          );
-                        }
-                        return <span key={word.id}>{word.text}</span>;
-                      })}
-                      
-                      {/* Nombor Ayat */}
-                      <span style={{ fontSize: '22px', color: '#0f766e', fontWeight: 'bold', fontFamily: 'sans-serif', marginRight: '8px' }}>
-                        ﴿{verseNumber}﴾
-                      </span>
+                    {/* Memaparkan Imej Tajwid Asli dari Quran.com (Tidak akan pecah & warna tajwid 100% tepat) */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0' }}>
+                      <img 
+                        src={tajweedImageUrl} 
+                        alt={`Ayat ${verseNumber}`} 
+                        style={{ maxWidth: '100%', height: 'auto', minHeight: '50px', objectFit: 'contain' }} 
+                        onError={(e) => {
+                          // Jika imej gagal dimuatkan, ia akan paparkan teks biasa sebagai backup
+                          e.currentTarget.style.display = 'none';
+                          const fallbackText = document.getElementById(`fallback-${verse.id}`);
+                          if (fallbackText) fallbackText.style.display = 'block';
+                        }}
+                      />
+                      {/* Teks backup jika internet lambat loading imej */}
+                      <div 
+                        id={`fallback-${verse.id}`}
+                        dir="rtl"
+                        style={{ display: 'none', fontSize: '32px', fontFamily: 'serif', lineHeight: '2.5', textAlign: 'right', direction: 'rtl' }}
+                      >
+                        {verse.text_uthmani} ﴿{verseNumber}﴾
+                      </div>
                     </div>
 
                     {/* Terjemahan Melayu */}
