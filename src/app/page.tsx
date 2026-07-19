@@ -407,12 +407,14 @@ export default function Home() {
           }
 
           .mushaf-box {
+            max-width: 480px; /* BAHARU: kuruskan HANYA bahagian ayat, bukan keseluruhan halaman */
+            margin: 0 auto;
             padding: 10px 12px;
             overflow-x: hidden; /* jaringan keselamatan semasa saat pengiraan saiz belum siap */
           }
 
           @media (max-width: 480px) {
-            .mushaf-box { padding: 10px 18px !important; }
+            .mushaf-box { max-width: 100%; padding: 10px 18px !important; }
             .mushaf-outer { padding: 10px 10px 40px 10px !important; }
           }
         `}</style>
