@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 export default function Home() {
   const [surahs, setSurahs] = useState<any[]>([]);
@@ -7,6 +8,93 @@ export default function Home() {
   const [verses, setVerses] = useState<any[]>([]);
   const [translations, setTranslations] = useState<any[]>([]);
   const [loadingVerses, setLoadingVerses] = useState<boolean>(false);
+
+  // --- BAHARU: status log masuk & progress hafazan -----------------------
+  const [user, setUser] = useState<any>(null);
+  // simpan nombor ayat yang dah ditanda "master" untuk surah semasa
+  const [masteredAyahs, setMasteredAyahs] = useState<Set<number>>(new Set());
+  const [savingAyah, setSavingAyah] = useState<number | null>(null); // elak double-click semasa simpan
+
+  useEffect(() => {
+    // semak sesi log masuk semasa app pertama kali load
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+    });
+
+    // dengar perubahan status log masuk (login/logout) di mana-mana bahagian app
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  // ambil senarai ayat yang dah "master" untuk surah + user semasa
+  const fetchMasteredAyahs = async (surahId: number, userId: string) => {
+    const { data, error } = await supabase
+      .from('hafazan_progress')
+      .select('ayah_number')
+      .eq('user_id', userId)
+      .eq('surah_number', surahId)
+      .eq('status', 'master');
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+    setMasteredAyahs(new Set((data || []).map((row: any) => row.ayah_number)));
+  };
+
+  // togol status master untuk satu ayat (tekan untuk tanda, tekan lagi untuk buang tanda)
+  const toggleMastered = async (surahId: number, ayahNumber: number) => {
+    if (!user) return;
+    setSavingAyah(ayahNumber);
+
+    const alreadyMastered = masteredAyahs.has(ayahNumber);
+
+    if (alreadyMastered) {
+      // buang rekod (kembali ke "sedang belajar")
+      const { error } = await supabase
+        .from('hafazan_progress')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('surah_number', surahId)
+        .eq('ayah_number', ayahNumber);
+
+      if (!error) {
+        setMasteredAyahs((prev) => {
+          const next = new Set(prev);
+          next.delete(ayahNumber);
+          return next;
+        });
+      }
+    } else {
+      // upsert: tambah baharu ATAU kemaskini kalau dah ada rekod (contoh status lama 'sedang_belajar')
+      const { error } = await supabase
+        .from('hafazan_progress')
+        .upsert(
+          {
+            user_id: user.id,
+            surah_number: surahId,
+            ayah_number: ayahNumber,
+            status: 'master',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,surah_number,ayah_number' }
+        );
+
+      if (!error) {
+        setMasteredAyahs((prev) => new Set(prev).add(ayahNumber));
+      }
+    }
+
+    setSavingAyah(null);
+  };
+  // -------------------------------------------------------------------------
 
   // --- BAHARU: kawalan Papar Terjemahan & Mode Hafazan -------------------
   const [showTranslation, setShowTranslation] = useState<boolean>(true);
@@ -41,7 +129,12 @@ export default function Home() {
     setVerses([]);
     setTranslations([]);
     setRevealedAyahs(new Set()); // reset status hafazan bila tukar surah
+    setMasteredAyahs(new Set());
     setLoadingVerses(true);
+
+    if (user) {
+      fetchMasteredAyahs(surah.id, user.id);
+    }
 
     // BAHARU: guna endpoint uthmani_tajweed — pulangkan HTML tajweed terus
     // (bukan uthmani biasa), jadi tak perlu imej / parser tambahan
@@ -96,6 +189,45 @@ export default function Home() {
         tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
         tajweed[class="ghunnah"] { color: #FF7E1E; }
       `}</style>
+
+      {/* BAHARU: status log masuk di penjuru kanan atas */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#64748b' }}>
+            <span>👤 {user.email}</span>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '20px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#475569',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Log Keluar
+            </button>
+          </div>
+        ) : (
+          <a
+            href="/login"
+            style={{
+              padding: '6px 14px',
+              borderRadius: '20px',
+              backgroundColor: '#0f766e',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            Log Masuk
+          </a>
+        )}
+      </div>
 
       <h1
         style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }}
@@ -183,6 +315,8 @@ export default function Home() {
                 const verseNumber = verse.verse_key.split(':')[1];
                 const isRevealed = revealedAyahs.has(verse.id);
                 const isBlurred = hafazanMode && !isRevealed;
+                const isMastered = masteredAyahs.has(Number(verseNumber));
+                const isSaving = savingAyah === Number(verseNumber);
 
                 return (
                   <div
@@ -191,22 +325,46 @@ export default function Home() {
                       backgroundColor: '#ffffff',
                       padding: '30px',
                       borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
+                      border: isMastered ? '1px solid #16a34a' : '1px solid #e2e8f0',
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '20px'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ backgroundColor: '#ccfbf1', color: '#0f766e', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
                         Ayat {verse.verse_key}
                       </span>
-                      {hafazanMode && (
-                        <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 600 }}>
-                          {isRevealed ? 'Tekan untuk blur semula' : 'Tekan untuk semak'}
-                        </span>
-                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {hafazanMode && (
+                          <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 600 }}>
+                            {isRevealed ? 'Tekan untuk blur semula' : 'Tekan untuk semak'}
+                          </span>
+                        )}
+
+                        {/* BAHARU: butang Tandakan Master — hanya nampak bila user log masuk */}
+                        {user && (
+                          <button
+                            onClick={() => toggleMastered(selectedSurah.id, Number(verseNumber))}
+                            disabled={isSaving}
+                            style={{
+                              padding: '4px 12px',
+                              borderRadius: '20px',
+                              border: isMastered ? '1px solid #16a34a' : '1px solid #cbd5e1',
+                              backgroundColor: isMastered ? '#16a34a' : '#ffffff',
+                              color: isMastered ? '#ffffff' : '#475569',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              cursor: isSaving ? 'wait' : 'pointer',
+                              opacity: isSaving ? 0.6 : 1,
+                            }}
+                          >
+                            {isMastered ? '✓ Master' : 'Tandakan Master'}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* BAHARU: teks Arab tajweed terus dari API, blur dalam Mode Hafazan */}
