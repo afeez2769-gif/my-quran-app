@@ -9,13 +9,61 @@ const BISMILLAH_HTML =
 // BAHARU: titik permulaan setiap 30 juz (muka surat + baris tepat) — dari data QUL
 const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{"j":2,"p":22,"l":1},{"j":3,"p":42,"l":1},{"j":4,"p":62,"l":2},{"j":5,"p":82,"l":1},{"j":6,"p":102,"l":1},{"j":7,"p":121,"l":9},{"j":8,"p":142,"l":1},{"j":9,"p":162,"l":1},{"j":10,"p":182,"l":1},{"j":11,"p":201,"l":13},{"j":12,"p":222,"l":1},{"j":13,"p":242,"l":1},{"j":14,"p":262,"l":3},{"j":15,"p":282,"l":3},{"j":16,"p":302,"l":1},{"j":17,"p":322,"l":3},{"j":18,"p":342,"l":3},{"j":19,"p":362,"l":1},{"j":20,"p":382,"l":1},{"j":21,"p":402,"l":1},{"j":22,"p":422,"l":1},{"j":23,"p":442,"l":1},{"j":24,"p":462,"l":1},{"j":25,"p":482,"l":1},{"j":26,"p":502,"l":9},{"j":27,"p":522,"l":1},{"j":28,"p":542,"l":3},{"j":29,"p":562,"l":3},{"j":30,"p":582,"l":3}];
 
-// BAHARU: MushafLine SENTIASA satu baris (nowrap) — tak sesekali lipat jadi
-// 2 baris. Saiz font (fontSize) dihantar dari komponen induk, dikira SEKALI
-// untuk SELURUH muka surat (bukan per-baris) — sama macam quran.com: semua
-// baris seragam saiznya, cuma keseluruhan muka jadi kecil sikit kalau perlu.
-function MushafLine({ html, fontSize }: { html: string; fontSize: number }) {
+// BAHARU: kawalan saiz PER BARIS — setiap baris ukur & kira saiz sendiri.
+// Kebanyakan baris kekal saiz asal (26px); cuma baris yang betul-betul
+// panjang je dikecilkan sikit supaya muat SATU baris (tak sesekali lipat).
+// Guna font-size terus (bukan transform:scale) — lebih mudah & tak
+// bermasalah dengan pusat/center macam pendekatan transform sebelum ni.
+const MUSHAF_BASE_FONT_SIZE = 26;
+const MUSHAF_MIN_FONT_SIZE = 13;
+
+function MushafLine({ html }: { html: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = useState(MUSHAF_BASE_FONT_SIZE);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function fit() {
+      if (cancelled) return;
+      const el = ref.current;
+      const parent = el?.parentElement;
+      if (!el || !parent) return;
+
+      // ukur pada saiz ASAS dahulu (elak "warisi" saiz kecil dari pengiraan lepas)
+      el.style.fontSize = `${MUSHAF_BASE_FONT_SIZE}px`;
+      const availableWidth = parent.clientWidth;
+      const naturalWidth = el.scrollWidth;
+
+      if (naturalWidth > availableWidth && naturalWidth > 0) {
+        const ratio = availableWidth / naturalWidth;
+        setFontSize(Math.max(MUSHAF_MIN_FONT_SIZE, MUSHAF_BASE_FONT_SIZE * ratio));
+      } else {
+        setFontSize(MUSHAF_BASE_FONT_SIZE);
+      }
+    }
+
+    // tunggu 2 frame supaya saiz asas sah-sah "dilukis" dulu sebelum diukur
+    const raf1 = requestAnimationFrame(() => {
+      requestAnimationFrame(fit);
+    });
+
+    // ukur SEKALI LAGI bila font UthmanicHafs sah-sah selesai dimuat
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(fit);
+    }
+
+    window.addEventListener('resize', fit);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      window.removeEventListener('resize', fit);
+    };
+  }, [html]);
+
   return (
     <div
+      ref={ref}
       dir="rtl"
       className="mushaf-line"
       style={{
@@ -82,62 +130,6 @@ export default function Home() {
   const currentPageLines = mushafLayout
     ? mushafLayout.filter((line: any) => line.p === currentPage).sort((a: any, b: any) => a.l - b.l)
     : [];
-
-  // --- BAHARU: kira SATU saiz font seragam untuk SELURUH muka surat ------
-  // (bukan per-baris) — elak baris terbelah/lipat, dan elak saiz tak sekata
-  // antara baris (macam quran.com buat)
-  const MUSHAF_BASE_FONT_SIZE = 26;
-  const MUSHAF_MIN_FONT_SIZE = 13;
-  const [mushafFontSize, setMushafFontSize] = useState(MUSHAF_BASE_FONT_SIZE);
-  const mushafBoxRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!mushafMode) return;
-
-    // set semula ke saiz asas dahulu (supaya pengiraan tak "warisi" saiz kecil dari muka lepas)
-    setMushafFontSize(MUSHAF_BASE_FONT_SIZE);
-
-    function measureAndFit() {
-      const box = mushafBoxRef.current;
-      if (!box) return;
-      const lineEls = box.querySelectorAll<HTMLElement>('.mushaf-line');
-      if (lineEls.length === 0) return;
-
-      const availableWidth = box.clientWidth;
-      let minRatio = 1;
-      lineEls.forEach((el) => {
-        const natural = el.scrollWidth;
-        if (natural > availableWidth && natural > 0) {
-          const ratio = availableWidth / natural;
-          if (ratio < minRatio) minRatio = ratio;
-        }
-      });
-
-      if (minRatio < 1) {
-        setMushafFontSize(Math.max(MUSHAF_MIN_FONT_SIZE, MUSHAF_BASE_FONT_SIZE * minRatio));
-      }
-    }
-
-    // tunggu 2 frame supaya saiz asas (26px) sah-sah dah "dilukis" sebelum diukur
-    const raf1 = requestAnimationFrame(() => {
-      const raf2 = requestAnimationFrame(measureAndFit);
-      return () => cancelAnimationFrame(raf2);
-    });
-
-    // ukur SEKALI LAGI bila font UthmanicHafs sah-sah selesai dimuat
-    if (typeof document !== 'undefined' && 'fonts' in document) {
-      document.fonts.ready.then(measureAndFit);
-    }
-
-    // ukur semula bila skrin diputar / saiz window berubah
-    window.addEventListener('resize', measureAndFit);
-
-    return () => {
-      cancelAnimationFrame(raf1);
-      window.removeEventListener('resize', measureAndFit);
-    };
-  }, [mushafMode, currentPage, mushafWords]);
-  // -------------------------------------------------------------------------
 
   // BAHARU: peta nombor surah -> muka surat permulaan (untuk dropdown "lompat ke surah")
   const surahStartPages = useMemo(() => {
@@ -375,12 +367,12 @@ export default function Home() {
           }
 
           .mushaf-box {
-            padding: 30px 25px;
+            padding: 10px 12px;
             overflow-x: hidden; /* jaringan keselamatan semasa saat pengiraan saiz belum siap */
           }
 
           @media (max-width: 480px) {
-            .mushaf-box { padding: 16px 8px !important; }
+            .mushaf-box { padding: 8px 4px !important; }
           }
         `}</style>
 
@@ -475,11 +467,7 @@ export default function Home() {
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
-            <div
-              ref={mushafBoxRef}
-              className="mushaf-box"
-              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-            >
+            <div className="mushaf-box">
               {currentPageLines.map((line: any, idx: number) => {
                 const juzHere = JUZ_STARTS.find((j) => j.p === line.p && j.l === line.l);
 
@@ -522,7 +510,7 @@ export default function Home() {
                     <div key={idx}>
                       {juzBadge}
                       <div style={{ margin: '10px 0' }}>
-                        <MushafLine html={BISMILLAH_HTML} fontSize={mushafFontSize} />
+                        <MushafLine html={BISMILLAH_HTML} />
                       </div>
                     </div>
                   );
@@ -536,7 +524,7 @@ export default function Home() {
                 return (
                   <div key={idx}>
                     {juzBadge}
-                    <MushafLine html={lineHtml} fontSize={mushafFontSize} />
+                    <MushafLine html={lineHtml} />
                   </div>
                 );
               })}
