@@ -26,7 +26,10 @@ function MushafLine({
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
+    let cancelled = false;
+
     function fit() {
+      if (cancelled) return;
       const container = containerRef.current;
       const text = textRef.current;
       if (!container || !text) return;
@@ -43,9 +46,19 @@ function MushafLine({
       }
     }
 
+    // BAHARU: ukur serta-merta (untuk kes font dah cache/load), DAN ukur SEKALI LAGI
+    // bila font UthmanicHafs sah-sah selesai dimuat (elak overflow sebab ukur
+    // guna font fallback yang lebih nipis sebelum font sebenar load)
     fit();
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      document.fonts.ready.then(fit);
+    }
+
     window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('resize', fit);
+    };
   }, [html]);
 
   return (
@@ -54,8 +67,8 @@ function MushafLine({
       style={{
         width: '100%',
         display: 'flex',
-        justifyContent: centered ? 'center' : 'flex-end', // RTL: mula dari kanan
-        overflow: 'visible',
+        justifyContent: 'center', // BAHARU: sentiasa tengah, elak nampak "tersadai" ke satu sisi bila di-scale
+        overflow: 'hidden', // jaringan keselamatan: walaupun scale tersasar seketika, tak sesekali overflow skrin
       }}
     >
       <div
@@ -64,7 +77,7 @@ function MushafLine({
         className="mushaf-line"
         style={{
           transform: `scale(${scale})`,
-          transformOrigin: 'right center',
+          transformOrigin: 'center center',
           whiteSpace: 'nowrap',
         }}
         dangerouslySetInnerHTML={{ __html: html }}
