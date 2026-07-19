@@ -1,10 +1,13 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 // Teks tajweed Bismillah — dikongsi antara paparan surah biasa & Mode Mushaf
 const BISMILLAH_HTML =
   'بِسْمِ <tajweed class="ham_wasl">ٱ</tajweed>للَّهِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda_normal">ـٰ</tajweed>نِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّح<tajweed class="madda_permissible">ِي</tajweed>مِ';
+
+// BAHARU: titik permulaan setiap 30 juz (muka surat + baris tepat) — dari data QUL
+const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{"j":2,"p":22,"l":1},{"j":3,"p":42,"l":1},{"j":4,"p":62,"l":2},{"j":5,"p":82,"l":1},{"j":6,"p":102,"l":1},{"j":7,"p":121,"l":9},{"j":8,"p":142,"l":1},{"j":9,"p":162,"l":1},{"j":10,"p":182,"l":1},{"j":11,"p":201,"l":13},{"j":12,"p":222,"l":1},{"j":13,"p":242,"l":1},{"j":14,"p":262,"l":3},{"j":15,"p":282,"l":3},{"j":16,"p":302,"l":1},{"j":17,"p":322,"l":3},{"j":18,"p":342,"l":3},{"j":19,"p":362,"l":1},{"j":20,"p":382,"l":1},{"j":21,"p":402,"l":1},{"j":22,"p":422,"l":1},{"j":23,"p":442,"l":1},{"j":24,"p":462,"l":1},{"j":25,"p":482,"l":1},{"j":26,"p":502,"l":9},{"j":27,"p":522,"l":1},{"j":28,"p":542,"l":3},{"j":29,"p":562,"l":3},{"j":30,"p":582,"l":3}];
 
 export default function Home() {
   const [surahs, setSurahs] = useState<any[]>([]);
@@ -59,6 +62,16 @@ export default function Home() {
   const currentPageLines = mushafLayout
     ? mushafLayout.filter((line: any) => line.p === currentPage).sort((a: any, b: any) => a.l - b.l)
     : [];
+
+  // BAHARU: peta nombor surah -> muka surat permulaan (untuk dropdown "lompat ke surah")
+  const surahStartPages = useMemo(() => {
+    if (!mushafLayout) return {} as Record<number, number>;
+    const map: Record<number, number> = {};
+    for (const line of mushafLayout) {
+      if (line.t === 'surah_name') map[line.s] = line.p;
+    }
+    return map;
+  }, [mushafLayout]);
   // -------------------------------------------------------------------------
 
   // --- BAHARU: status log masuk & progress hafazan -----------------------
@@ -364,6 +377,32 @@ export default function Home() {
               ⬅️ Keluar Mode Mushaf
             </button>
 
+            {/* BAHARU: dropdown lompat terus ke surah */}
+            <select
+              value=""
+              onChange={(e) => {
+                const page = surahStartPages[Number(e.target.value)];
+                if (page) goToPage(page);
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                color: '#0f766e',
+                fontWeight: 600,
+                fontSize: '13px',
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="" disabled>Lompat ke Surah...</option>
+              {surahs.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.id}. {s.name_complex}
+                </option>
+              ))}
+            </select>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 onClick={() => goToPage(currentPage - 1)}
@@ -411,12 +450,42 @@ export default function Home() {
           ) : (
             <div className="mushaf-box" style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
               {currentPageLines.map((line: any, idx: number) => {
+                // BAHARU: semak kalau baris ni tempat permulaan mana-mana juz
+                const juzHere = JUZ_STARTS.find((j) => j.p === line.p && j.l === line.l);
+
+                const juzBadge = juzHere && (
+                  <div
+                    key={`juz-${idx}`}
+                    style={{
+                      textAlign: 'center',
+                      margin: '10px 0 4px 0',
+                      fontFamily: '"Inter", sans-serif',
+                    }}
+                  >
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '3px 14px',
+                      borderRadius: '20px',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      letterSpacing: '0.5px',
+                    }}>
+                      JUZUK {juzHere.j}
+                    </span>
+                  </div>
+                );
+
                 if (line.t === 'surah_name') {
                   const surahInfo = surahs.find((s: any) => s.id === line.s);
                   return (
-                    <div key={idx} style={{ textAlign: 'center', margin: '16px 0', fontFamily: '"Inter", sans-serif' }}>
-                      <div style={{ display: 'inline-block', padding: '6px 24px', border: '1px solid #0f766e', borderRadius: '8px', color: '#0f766e', fontWeight: 700, fontSize: '17px' }}>
-                        {surahInfo?.name_complex || `Surah ${line.s}`}
+                    <div key={idx}>
+                      {juzBadge}
+                      <div style={{ textAlign: 'center', margin: '16px 0', fontFamily: '"Inter", sans-serif' }}>
+                        <div style={{ display: 'inline-block', padding: '6px 24px', border: '1px solid #0f766e', borderRadius: '8px', color: '#0f766e', fontWeight: 700, fontSize: '17px' }}>
+                          {surahInfo?.name_complex || `Surah ${line.s}`}
+                        </div>
                       </div>
                     </div>
                   );
@@ -424,13 +493,15 @@ export default function Home() {
 
                 if (line.t === 'basmallah') {
                   return (
-                    <div
-                      key={idx}
-                      dir="rtl"
-                      className="mushaf-line mushaf-line--center"
-                      style={{ margin: '10px 0' }}
-                      dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
-                    />
+                    <div key={idx}>
+                      {juzBadge}
+                      <div
+                        dir="rtl"
+                        className="mushaf-line mushaf-line--center"
+                        style={{ margin: '10px 0' }}
+                        dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
+                      />
+                    </div>
                   );
                 }
 
@@ -441,12 +512,14 @@ export default function Home() {
                 const lineHtml = lineWords.join(' ');
 
                 return (
-                  <div
-                    key={idx}
-                    dir="rtl"
-                    className={`mushaf-line ${line.c ? 'mushaf-line--center' : 'mushaf-line--justify'}`}
-                    dangerouslySetInnerHTML={{ __html: lineHtml }}
-                  />
+                  <div key={idx}>
+                    {juzBadge}
+                    <div
+                      dir="rtl"
+                      className={`mushaf-line ${line.c ? 'mushaf-line--center' : 'mushaf-line--justify'}`}
+                      dangerouslySetInnerHTML={{ __html: lineHtml }}
+                    />
+                  </div>
                 );
               })}
             </div>
