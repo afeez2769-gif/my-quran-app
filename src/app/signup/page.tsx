@@ -51,7 +51,7 @@ export default function SignupPage() {
   return (
     <div style={pageStyle}>
       <form onSubmit={handleSignup} style={cardStyle}>
-        <h1 style={titleStyle}>🕋 Daftar Akaun</h1>
+        <h1 style={titleStyle}>🕋 Daftar Akaun 30 Juzuk</h1>
 
         <input
           type="text"
