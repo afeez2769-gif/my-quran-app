@@ -130,36 +130,11 @@ export default function Home() {
     setMushafMode(true);
   };
 
-  const goToPage = (page: number, direction: 'next' | 'prev' = 'next') => {
+  const goToPage = (page: number) => {
     const clamped = Math.min(604, Math.max(1, page));
     if (clamped === currentPage) return;
-    setSlideDir(direction);
     setCurrentPage(clamped);
   };
-
-  // BAHARU: gerak isyarat swipe (selak) untuk Mode Mushaf
-  const [slideDir, setSlideDir] = useState<'next' | 'prev'>('next');
-  const touchStartX = useRef<number | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-    const SWIPE_THRESHOLD = 50;
-
-    if (deltaX < -SWIPE_THRESHOLD) {
-      // jari gerak ke kiri -> muka surat seterusnya
-      goToPage(currentPage + 1, 'next');
-    } else if (deltaX > SWIPE_THRESHOLD) {
-      // jari gerak ke kanan -> muka surat sebelum
-      goToPage(currentPage - 1, 'prev');
-    }
-    touchStartX.current = null;
-  };
-  // -------------------------------------------------------------------------
 
   // baris untuk muka surat semasa sahaja (ditapis dari layout penuh)
   const currentPageLines = mushafLayout
@@ -393,17 +368,6 @@ export default function Home() {
             .mushaf-line { font-size: 22px; line-height: 2.1; }
             .mushaf-box { padding: 18px 10px !important; }
           }
-
-          @keyframes slideInNext {
-            from { transform: translateX(40px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-          @keyframes slideInPrev {
-            from { transform: translateX(-40px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-          }
-          .mushaf-box--slide-next { animation: slideInNext 0.22s ease-out; }
-          .mushaf-box--slide-prev { animation: slideInPrev 0.22s ease-out; }
         `}</style>
 
         {/* Bar atas melekat (sticky) — kekal kelihatan semasa scroll */}
@@ -452,7 +416,7 @@ export default function Home() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
-                onClick={() => goToPage(currentPage - 1, 'prev')}
+                onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
                 style={{
                   padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
@@ -479,7 +443,7 @@ export default function Home() {
               </form>
 
               <button
-                onClick={() => goToPage(currentPage + 1, 'next')}
+                onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage >= 604}
                 style={{
                   padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
@@ -494,19 +458,12 @@ export default function Home() {
         </div>
 
         <div style={{ maxWidth: '850px', margin: '0 auto', padding: '15px 15px 40px 15px' }}>
-          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '11px', margin: '0 0 10px 0' }}>
-            👆 Leret ke kiri/kanan pada teks untuk selak muka surat
-          </p>
-
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
             <div
-              key={currentPage}
-              className={`mushaf-box ${slideDir === 'next' ? 'mushaf-box--slide-next' : 'mushaf-box--slide-prev'}`}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', touchAction: 'pan-y' }}
+              className="mushaf-box"
+              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
             >
               {currentPageLines.map((line: any, idx: number) => {
                 const juzHere = JUZ_STARTS.find((j) => j.p === line.p && j.l === line.l);
@@ -570,6 +527,32 @@ export default function Home() {
               })}
             </div>
           )}
+
+          {/* BAHARU: butang navigasi kecil di bawah juga */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', margin: '14px 0 4px 0' }}>
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              style={{
+                padding: '6px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', opacity: currentPage <= 1 ? 0.4 : 1,
+              }}
+            >
+              ◀ Kembali
+            </button>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= 604}
+              style={{
+                padding: '6px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                cursor: currentPage >= 604 ? 'not-allowed' : 'pointer', opacity: currentPage >= 604 ? 0.4 : 1,
+              }}
+            >
+              Seterusnya ▶
+            </button>
+          </div>
 
           {/* BAHARU: footer kecil — surah, muka surat, juzuk semasa */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif' }}>
@@ -635,18 +618,6 @@ export default function Home() {
           .mushaf-line { font-size: 22px; line-height: 2.1; }
           .mushaf-box { padding: 18px 10px !important; }
         }
-
-        /* BAHARU: animasi slide macam selak Quran sebenar */
-        @keyframes slideInNext {
-          from { transform: translateX(40px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideInPrev {
-          from { transform: translateX(-40px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .mushaf-box--slide-next { animation: slideInNext 0.22s ease-out; }
-        .mushaf-box--slide-prev { animation: slideInPrev 0.22s ease-out; }
       `}</style>
 
 
