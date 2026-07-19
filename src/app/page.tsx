@@ -26,6 +26,15 @@ const MUSHAF_BASE_FONT_SIZE_DESKTOP = 26;
 const MUSHAF_BASE_FONT_SIZE_MOBILE = 19;
 const MUSHAF_MIN_FONT_SIZE = 12;
 
+// BAHARU: tukar nombor Barat (123) ke angka Arab (١٢٣)
+const ARABIC_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+function toArabicNumeral(n: number): string {
+  return String(n)
+    .split('')
+    .map((ch) => (ARABIC_DIGITS[Number(ch)] !== undefined ? ARABIC_DIGITS[Number(ch)] : ch))
+    .join('');
+}
+
 function getMushafBaseFontSize() {
   if (typeof window === 'undefined') return MUSHAF_BASE_FONT_SIZE_DESKTOP;
   return window.innerWidth <= 480 ? MUSHAF_BASE_FONT_SIZE_MOBILE : MUSHAF_BASE_FONT_SIZE_DESKTOP;
@@ -615,7 +624,7 @@ export default function Home() {
           {/* BAHARU: footer kecil — surah, muka surat, juzuk semasa */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif' }}>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-              Muka Surat {currentPage}
+              {currentPage} ({toArabicNumeral(currentPage)})
             </span>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
               {currentSurahInfo?.name_complex || ''} • Juzuk {currentJuzNumber}
