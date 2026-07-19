@@ -15,7 +15,7 @@ export default function Home() {
       <h1 style={{ color: '#059669', textAlign: 'center' }}>My Quran App</h1>
       <hr />
       <ul style={{ listStyle: 'none', padding: 0 }}>
-        {surahs.map((surah: any) => (
+        {surahs.map((surah: data) => (
           <li key={surah.id} style={{ padding: '15px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'between' }}>
             <div>
               <strong>{surah.id}. {surah.name_complex}</strong> <br />
