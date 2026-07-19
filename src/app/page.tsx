@@ -224,7 +224,7 @@ export default function Home() {
                         userSelect: isBlurred ? 'none' : 'auto',
                         transition: 'filter 0.25s ease',
                       }}
-                      dangerouslySetInnerHTML={{ __html: `${verse.text_uthmani_tajweed} ﴿${verseNumber}﴾` }}
+                      dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed }}
                     />
 
                     {/* Terjemahan Melayu — disorok automatik dalam Mode Hafazan */}
