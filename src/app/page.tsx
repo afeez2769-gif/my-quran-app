@@ -22,13 +22,19 @@ const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{
 // diregangkan (justify) untuk penuhi lebar baris. Font cuma dikecilkan sebagai
 // LANGKAH TERAKHIR — hanya jika jumlah lebar perkataan sendiri (tanpa jarak
 // pun) dah melebihi ruang yang ada.
-const MUSHAF_BASE_FONT_SIZE = 26;
-const MUSHAF_MIN_FONT_SIZE = 13;
+const MUSHAF_BASE_FONT_SIZE_DESKTOP = 26;
+const MUSHAF_BASE_FONT_SIZE_MOBILE = 19;
+const MUSHAF_MIN_FONT_SIZE = 12;
+
+function getMushafBaseFontSize() {
+  if (typeof window === 'undefined') return MUSHAF_BASE_FONT_SIZE_DESKTOP;
+  return window.innerWidth <= 480 ? MUSHAF_BASE_FONT_SIZE_MOBILE : MUSHAF_BASE_FONT_SIZE_DESKTOP;
+}
 
 function MushafLine({ words, centered }: { words: string[]; centered: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const [fontSize, setFontSize] = useState(MUSHAF_BASE_FONT_SIZE);
+  const [fontSize, setFontSize] = useState(MUSHAF_BASE_FONT_SIZE_DESKTOP);
   const [useJustify, setUseJustify] = useState(false);
 
   // baris "centered" (ikut data QUL) atau baris satu-perkataan sahaja —
@@ -44,8 +50,10 @@ function MushafLine({ words, centered }: { words: string[]; centered: boolean })
       const container = containerRef.current;
       if (!container) return;
 
+      const baseSize = getMushafBaseFontSize(); // BAHARU: 26px desktop, 19px mobile
+
       // ukur pada saiz ASAS dahulu
-      container.style.fontSize = `${MUSHAF_BASE_FONT_SIZE}px`;
+      container.style.fontSize = `${baseSize}px`;
       const availableWidth = container.clientWidth;
 
       // jumlahkan lebar SEMULA JADI setiap perkataan (tanpa jarak/gap)
@@ -58,12 +66,12 @@ function MushafLine({ words, centered }: { words: string[]; centered: boolean })
 
       if (totalWordsWidth <= availableWidth) {
         // perkataan sendiri dah muat selesa — kekal saiz asas, regangkan jarak (justify)
-        setFontSize(MUSHAF_BASE_FONT_SIZE);
+        setFontSize(baseSize);
         setUseJustify(canJustify);
       } else {
         // langsung tak muat walaupun perkataan rapat — baru kecilkan font
         const ratio = availableWidth / totalWordsWidth;
-        setFontSize(Math.max(MUSHAF_MIN_FONT_SIZE, MUSHAF_BASE_FONT_SIZE * ratio));
+        setFontSize(Math.max(MUSHAF_MIN_FONT_SIZE, baseSize * ratio));
         setUseJustify(false); // lepas dikecilkan, tiada baki ruang nak justify
       }
     }
@@ -404,13 +412,14 @@ export default function Home() {
           }
 
           @media (max-width: 480px) {
-            .mushaf-box { padding: 8px 4px !important; }
+            .mushaf-box { padding: 10px 18px !important; }
+            .mushaf-outer { padding: 10px 10px 40px 10px !important; }
           }
         `}</style>
 
         {/* Bar atas melekat (sticky) — kekal kelihatan semasa scroll */}
         <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '10px 15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', maxWidth: '850px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', maxWidth: '680px', margin: '0 auto' }}>
             <button
               onClick={() => setMushafMode(false)}
               style={{
@@ -495,7 +504,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{ maxWidth: '850px', margin: '0 auto', padding: '15px 15px 40px 15px' }}>
+        <div className="mushaf-outer" style={{ maxWidth: '680px', margin: '0 auto', padding: '15px 15px 40px 15px' }}>
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
