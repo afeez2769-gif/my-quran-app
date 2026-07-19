@@ -3,19 +3,27 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName }, // digunakan oleh trigger untuk isi profiles.full_name
+      },
+    });
 
     setLoading(false);
 
@@ -24,15 +32,35 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/'); // balik ke halaman utama lepas berjaya log masuk
-    router.refresh();
+    setSuccess(true);
   };
+
+  if (success) {
+    return (
+      <div style={pageStyle}>
+        <div style={cardStyle}>
+          <h1 style={titleStyle}>Semak E-mel Anda</h1>
+          <p style={{ color: '#64748b', fontSize: '14px', textAlign: 'center' }}>
+            Kami dah hantar pautan pengesahan ke <strong>{email}</strong>. Sila klik pautan tu untuk aktifkan akaun sebelum log masuk.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={pageStyle}>
-      <form onSubmit={handleLogin} style={cardStyle}>
-        <h1 style={titleStyle}>🕋 Log Masuk</h1>
+      <form onSubmit={handleSignup} style={cardStyle}>
+        <h1 style={titleStyle}>🕋 Daftar Akaun</h1>
 
+        <input
+          type="text"
+          placeholder="Nama Penuh"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
+          style={inputStyle}
+        />
         <input
           type="email"
           placeholder="E-mel"
@@ -43,21 +71,22 @@ export default function LoginPage() {
         />
         <input
           type="password"
-          placeholder="Kata Laluan"
+          placeholder="Kata Laluan (min. 6 aksara)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          minLength={6}
           style={inputStyle}
         />
 
         {error && <p style={{ color: '#dc2626', fontSize: '13px', margin: 0 }}>{error}</p>}
 
         <button type="submit" disabled={loading} style={buttonStyle}>
-          {loading ? 'Sedang log masuk...' : 'Log Masuk'}
+          {loading ? 'Sedang daftar...' : 'Daftar'}
         </button>
 
         <p style={{ textAlign: 'center', fontSize: '13px', color: '#64748b', margin: 0 }}>
-          Belum ada akaun? <a href="/signup" style={{ color: '#0f766e', fontWeight: 600 }}>Daftar</a>
+          Dah ada akaun? <a href="/login" style={{ color: '#0f766e', fontWeight: 600 }}>Log Masuk</a>
         </p>
       </form>
     </div>
