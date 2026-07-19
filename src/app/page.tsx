@@ -72,6 +72,12 @@ export default function Home() {
       {/* BAHARU: warna rasmi tajweed — diletak sebagai global style supaya
           terpakai pada HTML dari dangerouslySetInnerHTML (<tajweed class=...>) */}
       <style jsx global>{`
+        @font-face {
+          font-family: 'UthmanicHafs';
+          src: url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2') format('woff2'),
+               url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.ttf') format('truetype');
+          font-display: swap;
+        }
         tajweed[class="ham_wasl"],
         tajweed[class="slnt"],
         tajweed[class="laam_shamsiyah"] { color: #AAAAAA; }
@@ -209,7 +215,7 @@ export default function Home() {
                       onClick={() => hafazanMode && toggleReveal(verse.id)}
                       style={{
                         fontSize: '32px',
-                        fontFamily: 'serif',
+                        fontFamily: "'UthmanicHafs', serif",
                         lineHeight: '2.5',
                         textAlign: 'right',
                         direction: 'rtl',
