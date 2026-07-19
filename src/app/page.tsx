@@ -13,33 +13,37 @@ export default function Home() {
   const [translations, setTranslations] = useState<any[]>([]);
   const [loadingVerses, setLoadingVerses] = useState<boolean>(false);
 
-  // --- BAHARU: Mode Mushaf (baca ikut 604 muka surat sebenar) ------------
+  // --- BAHARU: Mode Mushaf baris-tepat (data tempatan dari QUL, bukan API) ---
   const [mushafMode, setMushafMode] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageVerses, setPageVerses] = useState<any[]>([]);
-  const [loadingPage, setLoadingPage] = useState<boolean>(false);
   const [pageInput, setPageInput] = useState<string>('1');
+  const [mushafLayout, setMushafLayout] = useState<any[] | null>(null); // semua 9046 baris (dimuat sekali sahaja)
+  const [mushafWords, setMushafWords] = useState<string[] | null>(null); // semua 83668 perkataan (dimuat sekali sahaja)
+  const [loadingMushafData, setLoadingMushafData] = useState<boolean>(false);
 
-  const fetchMushafPage = (pageNumber: number) => {
-    setLoadingPage(true);
-    fetch(`https://api.quran.com/api/v4/verses/by_page/${pageNumber}?fields=text_uthmani_tajweed`)
-      .then(res => res.json())
-      .then(data => {
-        setPageVerses(data.verses || []);
-        setLoadingPage(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoadingPage(false);
-      });
-  };
+  // muat layout.json & words.json SEKALI sahaja apabila Mode Mushaf dibuka buat pertama kali
+  useEffect(() => {
+    if (mushafMode && !mushafLayout) {
+      setLoadingMushafData(true);
+      Promise.all([
+        fetch('/quran-data/layout.json').then(res => res.json()),
+        fetch('/quran-data/words.json').then(res => res.json()),
+      ])
+        .then(([layoutData, wordsData]) => {
+          setMushafLayout(layoutData);
+          setMushafWords(wordsData);
+          setLoadingMushafData(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoadingMushafData(false);
+        });
+    }
+  }, [mushafMode, mushafLayout]);
 
   useEffect(() => {
-    if (mushafMode) {
-      fetchMushafPage(currentPage);
-      setPageInput(String(currentPage));
-    }
-  }, [mushafMode, currentPage]);
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   const openMushafMode = () => {
     setSelectedSurah(null);
@@ -50,6 +54,11 @@ export default function Home() {
     const clamped = Math.min(604, Math.max(1, page));
     setCurrentPage(clamped);
   };
+
+  // baris untuk muka surat semasa sahaja (ditapis dari layout penuh)
+  const currentPageLines = mushafLayout
+    ? mushafLayout.filter((line: any) => line.p === currentPage).sort((a: any, b: any) => a.l - b.l)
+    : [];
   // -------------------------------------------------------------------------
 
   // --- BAHARU: status log masuk & progress hafazan -----------------------
@@ -220,17 +229,33 @@ export default function Home() {
         tajweed[class="madda_normal"] { color: #537FFF; }
         tajweed[class="madda_permissible"] { color: #4050FF; }
         tajweed[class="madda_necessary"] { color: #000EBC; }
-        tajweed[class="madda_obligatory"] { color: #2144C1; }
-        tajweed[class="qalqalah"] { color: #DD0008; }
+        tajweed[class="madda_obligatory"],
+        tajweed[class="madda_obligatory_mottasel"],
+        tajweed[class="madda_obligatory_monfasel"] { color: #2144C1; }
+        tajweed[class="qalqalah"],
+        tajweed[class="qalaqah"] { color: #DD0008; }
         tajweed[class="ikhafa_shafawi"] { color: #D500B7; }
         tajweed[class="ikhafa"] { color: #9400A8; }
         tajweed[class="idgham_shafawi"] { color: #58B800; }
         tajweed[class="iqlab"] { color: #26BFFD; }
         tajweed[class="idgham_ghunnah"] { color: #169777; }
-        tajweed[class="idgham_no_ghunnah"] { color: #169200; }
+        tajweed[class="idgham_no_ghunnah"],
+        tajweed[class="idgham_wo_ghunnah"] { color: #169200; }
         tajweed[class="idgham_mutajanisayn"],
         tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
         tajweed[class="ghunnah"] { color: #FF7E1E; }
+
+        /* BAHARU: gaya untuk Mode Mushaf baris-tepat */
+        .mushaf-line {
+          font-family: 'UthmanicHafs', serif;
+          font-size: 26px;
+          line-height: 2.4;
+          direction: rtl;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+        .mushaf-line--justify { text-align: justify; text-align-last: justify; }
+        .mushaf-line--center { text-align: center; }
       `}</style>
 
       {/* BAHARU: status log masuk di penjuru kanan atas */}
@@ -367,45 +392,49 @@ export default function Home() {
             </div>
           </div>
 
-          {loadingPage ? (
-            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan muka surat...</p>
+          {loadingMushafData ? (
+            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
-            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '40px 30px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              {pageVerses[0]?.juz_number && (
-                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', marginBottom: '20px', letterSpacing: '0.5px' }}>
-                  JUZUK {pageVerses[0].juz_number}
-                </p>
-              )}
-
-              <div dir="rtl" style={{ fontFamily: "'UthmanicHafs', serif", fontSize: '26px', lineHeight: '2.6', textAlign: 'justify' }}>
-                {pageVerses.map((verse: any) => {
-                  const isNewSurah = verse.verse_number === 1;
-                  const surahInfo = surahs.find((s: any) => s.id === verse.chapter_id);
-
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+              {currentPageLines.map((line: any, idx: number) => {
+                if (line.t === 'surah_name') {
+                  const surahInfo = surahs.find((s: any) => s.id === line.s);
                   return (
-                    <span key={verse.id}>
-                      {isNewSurah && surahInfo && (
-                        <span
-                          dir="ltr"
-                          style={{ display: 'block', textAlign: 'center', margin: '20px 0', fontFamily: '"Inter", sans-serif' }}
-                        >
-                          <span style={{ display: 'block', color: '#0f766e', fontWeight: 700, fontSize: '20px' }}>
-                            {surahInfo.name_complex}
-                          </span>
-                          {verse.chapter_id !== 9 && (
-                            <span
-                              dir="rtl"
-                              style={{ display: 'block', fontFamily: "'UthmanicHafs', serif", fontSize: '24px', marginTop: '10px' }}
-                              dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
-                            />
-                          )}
-                        </span>
-                      )}
-                      <span dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed + ' ' }} />
-                    </span>
+                    <div key={idx} style={{ textAlign: 'center', margin: '16px 0', fontFamily: '"Inter", sans-serif' }}>
+                      <div style={{ display: 'inline-block', padding: '6px 24px', border: '1px solid #0f766e', borderRadius: '8px', color: '#0f766e', fontWeight: 700, fontSize: '17px' }}>
+                        {surahInfo?.name_complex || `Surah ${line.s}`}
+                      </div>
+                    </div>
                   );
-                })}
-              </div>
+                }
+
+                if (line.t === 'basmallah') {
+                  return (
+                    <div
+                      key={idx}
+                      dir="rtl"
+                      className="mushaf-line mushaf-line--center"
+                      style={{ margin: '10px 0' }}
+                      dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
+                    />
+                  );
+                }
+
+                // line.t === 'ayah'
+                const lineWords = mushafWords && line.f && line.e
+                  ? mushafWords.slice(line.f - 1, line.e)
+                  : [];
+                const lineHtml = lineWords.join(' ');
+
+                return (
+                  <div
+                    key={idx}
+                    dir="rtl"
+                    className={`mushaf-line ${line.c ? 'mushaf-line--center' : 'mushaf-line--justify'}`}
+                    dangerouslySetInnerHTML={{ __html: lineHtml }}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
