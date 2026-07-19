@@ -430,7 +430,7 @@ export default function Home() {
 
         {/* Bar atas melekat (sticky) — kekal kelihatan semasa scroll */}
         <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '10px 15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', maxWidth: '680px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: '10px', maxWidth: '680px', margin: '0 auto' }}>
             <button
               onClick={() => setMushafMode(false)}
               style={{
@@ -624,7 +624,7 @@ export default function Home() {
           {/* BAHARU: footer kecil — surah, muka surat, juzuk semasa */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif' }}>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-              {currentPage} ({toArabicNumeral(currentPage)})
+              {currentPage} - <span style={{ fontSize: '15px', fontFamily: "'UthmanicHafs', serif" }}>{toArabicNumeral(currentPage)}</span>
             </span>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
               {currentSurahInfo?.name_complex || ''} • Juzuk {currentJuzNumber}
