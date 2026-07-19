@@ -312,6 +312,233 @@ export default function Home() {
       });
   };
 
+  // BAHARU: Mode Mushaf dipaparkan FULL-SCREEN (overlay menutup seluruh skrin),
+  // berasingan sepenuhnya dari layout app biasa (tiada header/logo/padding app)
+  if (mushafMode) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: '#f8fafc', overflowY: 'auto', fontFamily: '"Inter", sans-serif' }}>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+        <style jsx global>{`
+          @font-face {
+            font-family: 'UthmanicHafs';
+            src: url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2') format('woff2'),
+                 url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.ttf') format('truetype');
+            font-display: swap;
+          }
+          tajweed[class="ham_wasl"],
+          tajweed[class="slnt"],
+          tajweed[class="laam_shamsiyah"] { color: #AAAAAA; }
+          tajweed[class="madda_normal"] { color: #537FFF; }
+          tajweed[class="madda_permissible"] { color: #4050FF; }
+          tajweed[class="madda_necessary"] { color: #000EBC; }
+          tajweed[class="madda_obligatory"],
+          tajweed[class="madda_obligatory_mottasel"],
+          tajweed[class="madda_obligatory_monfasel"] { color: #2144C1; }
+          tajweed[class="qalqalah"],
+          tajweed[class="qalaqah"] { color: #DD0008; }
+          tajweed[class="ikhafa_shafawi"] { color: #D500B7; }
+          tajweed[class="ikhafa"] { color: #9400A8; }
+          tajweed[class="idgham_shafawi"] { color: #58B800; }
+          tajweed[class="iqlab"] { color: #26BFFD; }
+          tajweed[class="idgham_ghunnah"] { color: #169777; }
+          tajweed[class="idgham_no_ghunnah"],
+          tajweed[class="idgham_wo_ghunnah"] { color: #169200; }
+          tajweed[class="idgham_mutajanisayn"],
+          tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
+          tajweed[class="ghunnah"] { color: #FF7E1E; }
+
+          .mushaf-line {
+            font-family: 'UthmanicHafs', serif;
+            font-size: 26px;
+            line-height: 2.4;
+          }
+
+          @media (max-width: 480px) {
+            .mushaf-line { font-size: 22px; line-height: 2.1; }
+            .mushaf-box { padding: 18px 10px !important; }
+          }
+
+          @keyframes slideInNext {
+            from { transform: translateX(40px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+          @keyframes slideInPrev {
+            from { transform: translateX(-40px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+          .mushaf-box--slide-next { animation: slideInNext 0.22s ease-out; }
+          .mushaf-box--slide-prev { animation: slideInPrev 0.22s ease-out; }
+        `}</style>
+
+        {/* Bar atas melekat (sticky) — kekal kelihatan semasa scroll */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '10px 15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', maxWidth: '850px', margin: '0 auto' }}>
+            <button
+              onClick={() => setMushafMode(false)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#475569',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              ⬅️ Keluar
+            </button>
+
+            <select
+              value=""
+              onChange={(e) => {
+                const page = surahStartPages[Number(e.target.value)];
+                if (page) goToPage(page);
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                color: '#0f766e',
+                fontWeight: 600,
+                fontSize: '13px',
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="" disabled>Lompat ke Surah...</option>
+              {surahs.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.id}. {s.name_complex}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => goToPage(currentPage - 1, 'prev')}
+                disabled={currentPage <= 1}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
+                  cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', opacity: currentPage <= 1 ? 0.4 : 1,
+                }}
+              >
+                ◀
+              </button>
+
+              <form
+                onSubmit={(e) => { e.preventDefault(); goToPage(Number(pageInput)); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={604}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', textAlign: 'center' }}
+                />
+                <span style={{ fontSize: '13px', color: '#64748b' }}>/ 604</span>
+              </form>
+
+              <button
+                onClick={() => goToPage(currentPage + 1, 'next')}
+                disabled={currentPage >= 604}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
+                  cursor: currentPage >= 604 ? 'not-allowed' : 'pointer', opacity: currentPage >= 604 ? 0.4 : 1,
+                }}
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ maxWidth: '850px', margin: '0 auto', padding: '15px 15px 40px 15px' }}>
+          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '11px', margin: '0 0 10px 0' }}>
+            👆 Leret ke kiri/kanan pada teks untuk selak muka surat
+          </p>
+
+          {loadingMushafData ? (
+            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
+          ) : (
+            <div
+              key={currentPage}
+              className={`mushaf-box ${slideDir === 'next' ? 'mushaf-box--slide-next' : 'mushaf-box--slide-prev'}`}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', touchAction: 'pan-y' }}
+            >
+              {currentPageLines.map((line: any, idx: number) => {
+                const juzHere = JUZ_STARTS.find((j) => j.p === line.p && j.l === line.l);
+
+                const juzBadge = juzHere && (
+                  <div
+                    key={`juz-${idx}`}
+                    style={{ textAlign: 'center', margin: '10px 0 4px 0', fontFamily: '"Inter", sans-serif' }}
+                  >
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '3px 14px',
+                      borderRadius: '20px',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      letterSpacing: '0.5px',
+                    }}>
+                      JUZUK {juzHere.j}
+                    </span>
+                  </div>
+                );
+
+                if (line.t === 'surah_name') {
+                  const surahInfo = surahs.find((s: any) => s.id === line.s);
+                  return (
+                    <div key={idx}>
+                      {juzBadge}
+                      <div style={{ textAlign: 'center', margin: '16px 0', fontFamily: '"Inter", sans-serif' }}>
+                        <div style={{ display: 'inline-block', padding: '6px 24px', border: '1px solid #0f766e', borderRadius: '8px', color: '#0f766e', fontWeight: 700, fontSize: '17px' }}>
+                          {surahInfo?.name_complex || `Surah ${line.s}`}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (line.t === 'basmallah') {
+                  return (
+                    <div key={idx}>
+                      {juzBadge}
+                      <div style={{ margin: '10px 0' }}>
+                        <MushafLine html={BISMILLAH_HTML} centered={true} />
+                      </div>
+                    </div>
+                  );
+                }
+
+                const lineWords = mushafWords && line.f && line.e
+                  ? mushafWords.slice(line.f - 1, line.e)
+                  : [];
+                const lineHtml = lineWords.join(' ');
+
+                return (
+                  <div key={idx}>
+                    {juzBadge}
+                    <MushafLine html={lineHtml} centered={!!line.c} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
 
@@ -428,7 +655,7 @@ export default function Home() {
       </p>
 
       {/* BAHARU: butang akses Mode Mushaf — hanya nampak di halaman senarai surah */}
-      {!mushafMode && !selectedSurah && (
+      {!selectedSurah && (
         <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
           <button
             onClick={openMushafMode}
@@ -450,178 +677,7 @@ export default function Home() {
 
       <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
 
-      {/* ----------------- MODE MUSHAF (604 muka surat) ----------------- */}
-      {mushafMode ? (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-            <button
-              onClick={() => setMushafMode(false)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '20px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              ⬅️ Keluar Mode Mushaf
-            </button>
-
-            {/* BAHARU: dropdown lompat terus ke surah */}
-            <select
-              value=""
-              onChange={(e) => {
-                const page = surahStartPages[Number(e.target.value)];
-                if (page) goToPage(page);
-              }}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                color: '#0f766e',
-                fontWeight: 600,
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="" disabled>Lompat ke Surah...</option>
-              {surahs.map((s: any) => (
-                <option key={s.id} value={s.id}>
-                  {s.id}. {s.name_complex}
-                </option>
-              ))}
-            </select>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                onClick={() => goToPage(currentPage - 1, 'prev')}
-                disabled={currentPage <= 1}
-                style={{
-                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
-                  cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', opacity: currentPage <= 1 ? 0.4 : 1,
-                }}
-              >
-                ◀
-              </button>
-
-              <form
-                onSubmit={(e) => { e.preventDefault(); goToPage(Number(pageInput)); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <input
-                  type="number"
-                  min={1}
-                  max={604}
-                  value={pageInput}
-                  onChange={(e) => setPageInput(e.target.value)}
-                  style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', textAlign: 'center' }}
-                />
-                <span style={{ fontSize: '13px', color: '#64748b' }}>/ 604</span>
-              </form>
-
-              <button
-                onClick={() => goToPage(currentPage + 1, 'next')}
-                disabled={currentPage >= 604}
-                style={{
-                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
-                  cursor: currentPage >= 604 ? 'not-allowed' : 'pointer', opacity: currentPage >= 604 ? 0.4 : 1,
-                }}
-              >
-                ▶
-              </button>
-            </div>
-          </div>
-
-          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '11px', margin: '0 0 10px 0' }}>
-            👆 Leret ke kiri/kanan pada teks untuk selak muka surat
-          </p>
-
-          {loadingMushafData ? (
-            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
-          ) : (
-            <div
-              key={currentPage}
-              className={`mushaf-box ${slideDir === 'next' ? 'mushaf-box--slide-next' : 'mushaf-box--slide-prev'}`}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', touchAction: 'pan-y' }}
-            >
-              {currentPageLines.map((line: any, idx: number) => {
-                // BAHARU: semak kalau baris ni tempat permulaan mana-mana juz
-                const juzHere = JUZ_STARTS.find((j) => j.p === line.p && j.l === line.l);
-
-                const juzBadge = juzHere && (
-                  <div
-                    key={`juz-${idx}`}
-                    style={{
-                      textAlign: 'center',
-                      margin: '10px 0 4px 0',
-                      fontFamily: '"Inter", sans-serif',
-                    }}
-                  >
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '3px 14px',
-                      borderRadius: '20px',
-                      backgroundColor: '#fef3c7',
-                      color: '#92400e',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      letterSpacing: '0.5px',
-                    }}>
-                      JUZUK {juzHere.j}
-                    </span>
-                  </div>
-                );
-
-                if (line.t === 'surah_name') {
-                  const surahInfo = surahs.find((s: any) => s.id === line.s);
-                  return (
-                    <div key={idx}>
-                      {juzBadge}
-                      <div style={{ textAlign: 'center', margin: '16px 0', fontFamily: '"Inter", sans-serif' }}>
-                        <div style={{ display: 'inline-block', padding: '6px 24px', border: '1px solid #0f766e', borderRadius: '8px', color: '#0f766e', fontWeight: 700, fontSize: '17px' }}>
-                          {surahInfo?.name_complex || `Surah ${line.s}`}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (line.t === 'basmallah') {
-                  return (
-                    <div key={idx}>
-                      {juzBadge}
-                      <div style={{ margin: '10px 0' }}>
-                        <MushafLine html={BISMILLAH_HTML} centered={true} />
-                      </div>
-                    </div>
-                  );
-                }
-
-                // line.t === 'ayah'
-                const lineWords = mushafWords && line.f && line.e
-                  ? mushafWords.slice(line.f - 1, line.e)
-                  : [];
-                const lineHtml = lineWords.join(' ');
-
-                return (
-                  <div key={idx}>
-                    {juzBadge}
-                    <MushafLine html={lineHtml} centered={!!line.c} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ) : selectedSurah ? (
+      {selectedSurah ? (
         <div>
           {/* Header Info Surah */}
           <div style={{ backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
