@@ -1085,8 +1085,12 @@ export default function Home() {
                 {surah.id}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: '600', color: theme.text, fontSize: '16px' }}>{surah.name_complex}</div>
-                <div style={{ fontSize: '13px', color: theme.textMuted, marginTop: '2px' }}>{surah.translated_name.name}</div>
+                <div dir="rtl" style={{ fontFamily: "'UthmanicHafs', serif", fontWeight: '700', color: theme.text, fontSize: '22px' }}>
+                  {surah.name_arabic}
+                </div>
+                <div style={{ fontSize: '12px', color: theme.textMuted, marginTop: '3px' }}>
+                  {surah.name_complex} • {surah.translated_name.name}
+                </div>
               </div>
             </div>
           ))}
