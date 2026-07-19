@@ -214,6 +214,31 @@ export default function Home() {
   }, [currentPage]);
   // -------------------------------------------------------------------------
 
+  // --- BAHARU: Mod Malam (Night Mode) --------------------------------------
+  const [darkMode, setDarkMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
+    if (saved === 'true') setDarkMode(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('darkMode', String(darkMode));
+    }
+  }, [darkMode]);
+
+  // set warna berdasarkan mod — satu tempat rujukan untuk seluruh app
+  const theme = {
+    bg: darkMode ? '#0f172a' : '#f8fafc',
+    card: darkMode ? '#1e293b' : '#ffffff',
+    border: darkMode ? '#334155' : '#e2e8f0',
+    text: darkMode ? '#e5e7eb' : '#0f172a',
+    textMuted: darkMode ? '#94a3b8' : '#64748b',
+    accent: '#0f766e',
+  };
+  // -------------------------------------------------------------------------
+
   // --- BAHARU: status log masuk & progress hafazan -----------------------
   const [user, setUser] = useState<any>(null);
   // simpan nombor ayat yang dah ditanda "master" untuk surah semasa
@@ -378,7 +403,7 @@ export default function Home() {
   // berasingan sepenuhnya dari layout app biasa (tiada header/logo/padding app)
   if (mushafMode) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: '#f8fafc', overflowY: 'auto', fontFamily: '"Inter", sans-serif' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: theme.bg, overflowY: 'auto', fontFamily: '"Inter", sans-serif', ['--mushaf-text-color' as any]: theme.text }}>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
         <style jsx global>{`
           @font-face {
@@ -412,6 +437,7 @@ export default function Home() {
           .mushaf-line {
             font-family: 'UthmanicHafs', serif;
             line-height: 2.3;
+            color: var(--mushaf-text-color, #111827);
             transition: font-size 0.1s ease-out; /* elak "lompat" kasar bila saiz dikira semula */
           }
 
@@ -429,22 +455,39 @@ export default function Home() {
         `}</style>
 
         {/* Bar atas melekat (sticky) — kekal kelihatan semasa scroll */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '10px 15px' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: theme.card, borderBottom: `1px solid ${theme.border}`, padding: '10px 15px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: '10px', maxWidth: '680px', margin: '0 auto' }}>
             <button
               onClick={() => setMushafMode(false)}
               style={{
                 padding: '8px 16px',
                 borderRadius: '20px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
+                border: `1px solid ${theme.border}`,
+                backgroundColor: theme.card,
+                color: theme.textMuted,
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
               ⬅️ Keluar
+            </button>
+
+            {/* BAHARU: togol Mod Malam */}
+            <button
+              onClick={() => setDarkMode((v) => !v)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '20px',
+                border: `1px solid ${theme.border}`,
+                backgroundColor: theme.card,
+                color: theme.text,
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {darkMode ? '☀️' : '🌙'}
             </button>
 
             <select
@@ -456,11 +499,11 @@ export default function Home() {
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                color: '#0f766e',
+                border: `1px solid ${theme.border}`,
+                color: theme.accent,
                 fontWeight: 600,
                 fontSize: '13px',
-                backgroundColor: '#ffffff',
+                backgroundColor: theme.card,
                 cursor: 'pointer',
               }}
             >
@@ -477,8 +520,8 @@ export default function Home() {
                 onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
                 style={{
-                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
+                  padding: '8px 14px', borderRadius: '8px', border: `1px solid ${theme.border}`,
+                  backgroundColor: theme.card, color: theme.accent, fontWeight: 600,
                   cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', opacity: currentPage <= 1 ? 0.4 : 1,
                 }}
               >
@@ -495,17 +538,17 @@ export default function Home() {
                   max={604}
                   value={pageInput}
                   onChange={(e) => setPageInput(e.target.value)}
-                  style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', textAlign: 'center' }}
+                  style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: `1px solid ${theme.border}`, textAlign: 'center', backgroundColor: theme.card, color: theme.text }}
                 />
-                <span style={{ fontSize: '13px', color: '#64748b' }}>/ 604</span>
+                <span style={{ fontSize: '13px', color: theme.textMuted }}>/ 604</span>
               </form>
 
               <button
                 onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage >= 604}
                 style={{
-                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
+                  padding: '8px 14px', borderRadius: '8px', border: `1px solid ${theme.border}`,
+                  backgroundColor: theme.card, color: theme.accent, fontWeight: 600,
                   cursor: currentPage >= 604 ? 'not-allowed' : 'pointer', opacity: currentPage >= 604 ? 0.4 : 1,
                 }}
               >
@@ -602,7 +645,7 @@ export default function Home() {
               disabled={currentPage <= 1}
               style={{
                 padding: '6px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                backgroundColor: theme.card, color: theme.accent, fontWeight: 600, fontSize: '13px',
                 cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', opacity: currentPage <= 1 ? 0.4 : 1,
               }}
             >
@@ -613,7 +656,7 @@ export default function Home() {
               disabled={currentPage >= 604}
               style={{
                 padding: '6px 16px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                backgroundColor: theme.card, color: theme.accent, fontWeight: 600, fontSize: '13px',
                 cursor: currentPage >= 604 ? 'not-allowed' : 'pointer', opacity: currentPage >= 604 ? 0.4 : 1,
               }}
             >
@@ -624,7 +667,7 @@ export default function Home() {
           {/* BAHARU: footer kecil — surah, muka surat, juzuk semasa */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif' }}>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-              {currentPage} - <span style={{ fontSize: '15px', fontFamily: "'UthmanicHafs', serif" }}>{toArabicNumeral(currentPage)}</span>
+              {currentPage} - <span style={{ fontSize: '13px' }}>{toArabicNumeral(currentPage)}</span>
             </span>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
               {currentSurahInfo?.name_complex || ''} • Juzuk {currentJuzNumber}
@@ -636,7 +679,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+    <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: theme.bg, minHeight: '100vh', color: theme.text }}>
 
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
 
@@ -674,19 +717,35 @@ export default function Home() {
 
 
 
-      {/* BAHARU: status log masuk di penjuru kanan atas */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+      {/* BAHARU: status log masuk + togol Mod Malam di penjuru kanan atas */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+        <button
+          onClick={() => setDarkMode((v) => !v)}
+          style={{
+            padding: '6px 12px',
+            borderRadius: '20px',
+            border: `1px solid ${theme.border}`,
+            backgroundColor: theme.card,
+            color: theme.text,
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          {darkMode ? '☀️' : '🌙'}
+        </button>
+
         {user ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#64748b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: theme.textMuted }}>
             <span>👤 {user.email}</span>
             <button
               onClick={handleLogout}
               style={{
                 padding: '6px 12px',
                 borderRadius: '20px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#475569',
+                border: `1px solid ${theme.border}`,
+                backgroundColor: theme.card,
+                color: theme.textMuted,
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -719,7 +778,7 @@ export default function Home() {
       >
         🕋 My Quran App
       </h1>
-      <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px', marginTop: 0 }}>
+      <p style={{ textAlign: 'center', color: theme.textMuted, fontSize: '14px', marginTop: 0 }}>
         {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital dengan Tajwid Berwarna & Terjemahan Malaysia"}
       </p>
 
@@ -732,7 +791,7 @@ export default function Home() {
               padding: '10px 20px',
               borderRadius: '20px',
               border: '1px solid #0f766e',
-              backgroundColor: '#ffffff',
+              backgroundColor: theme.card,
               color: '#0f766e',
               fontSize: '14px',
               fontWeight: 600,
@@ -744,12 +803,12 @@ export default function Home() {
         </div>
       )}
 
-      <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
+      <hr style={{ border: '0', borderTop: `1px solid ${theme.border}`, margin: '20px 0' }} />
 
       {selectedSurah ? (
         <div>
           {/* Header Info Surah */}
-          <div style={{ backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: theme.card, padding: '25px', borderRadius: '12px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
             <h2 style={{ color: '#0f766e', margin: '0 0 8px 0', fontSize: '24px' }}>{selectedSurah.name_complex}</h2>
             <div style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
               <span>{selectedSurah.revelation_place === 'makkah' ? 'Makkiyah' : 'Madaniyah'}</span>
@@ -811,7 +870,7 @@ export default function Home() {
                     disabled={versePage <= 1}
                     style={{
                       padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      backgroundColor: theme.card, color: theme.accent, fontWeight: 600, fontSize: '13px',
                       cursor: versePage <= 1 ? 'not-allowed' : 'pointer', opacity: versePage <= 1 ? 0.4 : 1,
                     }}
                   >
@@ -828,7 +887,7 @@ export default function Home() {
                     disabled={versePage >= totalVersePages}
                     style={{
                       padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      backgroundColor: theme.card, color: theme.accent, fontWeight: 600, fontSize: '13px',
                       cursor: versePage >= totalVersePages ? 'not-allowed' : 'pointer', opacity: versePage >= totalVersePages ? 0.4 : 1,
                     }}
                   >
@@ -866,10 +925,10 @@ export default function Home() {
                   <div
                     key={verse.id}
                     style={{
-                      backgroundColor: '#ffffff',
+                      backgroundColor: theme.card,
                       padding: '30px',
                       borderRadius: '12px',
-                      border: isMastered ? '1px solid #16a34a' : '1px solid #e2e8f0',
+                      border: isMastered ? '1px solid #16a34a' : `1px solid ${theme.border}`,
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                       display: 'flex',
                       flexDirection: 'column',
@@ -896,9 +955,9 @@ export default function Home() {
                             style={{
                               padding: '4px 12px',
                               borderRadius: '20px',
-                              border: isMastered ? '1px solid #16a34a' : '1px solid #cbd5e1',
-                              backgroundColor: isMastered ? '#16a34a' : '#ffffff',
-                              color: isMastered ? '#ffffff' : '#475569',
+                              border: isMastered ? '1px solid #16a34a' : `1px solid ${theme.border}`,
+                              backgroundColor: isMastered ? '#16a34a' : theme.card,
+                              color: isMastered ? '#ffffff' : theme.textMuted,
                               fontSize: '11px',
                               fontWeight: 600,
                               cursor: isSaving ? 'wait' : 'pointer',
@@ -921,6 +980,7 @@ export default function Home() {
                         lineHeight: '2.5',
                         textAlign: 'right',
                         direction: 'rtl',
+                        color: theme.text,
                         filter: isBlurred ? 'blur(8px)' : 'none',
                         cursor: hafazanMode ? 'pointer' : 'default',
                         userSelect: isBlurred ? 'none' : 'auto',
@@ -934,9 +994,9 @@ export default function Home() {
                       <div
                         style={{
                           fontSize: '15px',
-                          color: '#334155',
+                          color: theme.textMuted,
                           lineHeight: '1.6',
-                          borderTop: '1px dashed #e2e8f0',
+                          borderTop: `1px dashed ${theme.border}`,
                           paddingTop: '15px',
                           textAlign: 'left'
                         }}
@@ -955,7 +1015,7 @@ export default function Home() {
                     disabled={versePage <= 1}
                     style={{
                       padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      backgroundColor: theme.card, color: theme.accent, fontWeight: 600, fontSize: '13px',
                       cursor: versePage <= 1 ? 'not-allowed' : 'pointer', opacity: versePage <= 1 ? 0.4 : 1,
                     }}
                   >
@@ -969,7 +1029,7 @@ export default function Home() {
                     disabled={versePage >= totalVersePages}
                     style={{
                       padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      backgroundColor: theme.card, color: theme.accent, fontWeight: 600, fontSize: '13px',
                       cursor: versePage >= totalVersePages ? 'not-allowed' : 'pointer', opacity: versePage >= totalVersePages ? 0.4 : 1,
                     }}
                   >
@@ -988,10 +1048,10 @@ export default function Home() {
               key={surah.id}
               onClick={() => handleSurahClick(surah)}
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: theme.card,
                 padding: '20px',
                 borderRadius: '12px',
-                border: '1px solid #e2e8f0',
+                border: `1px solid ${theme.border}`,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease-in-out',
                 display: 'flex',
@@ -999,12 +1059,12 @@ export default function Home() {
                 gap: '15px'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', backgroundColor: '#f1f5f9', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', backgroundColor: theme.bg, borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: theme.textMuted }}>
                 {surah.id}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '16px' }}>{surah.name_complex}</div>
-                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{surah.translated_name.name}</div>
+                <div style={{ fontWeight: '600', color: theme.text, fontSize: '16px' }}>{surah.name_complex}</div>
+                <div style={{ fontSize: '13px', color: theme.textMuted, marginTop: '2px' }}>{surah.translated_name.name}</div>
               </div>
             </div>
           ))}
