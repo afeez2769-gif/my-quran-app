@@ -790,10 +790,10 @@ export default function Home() {
         style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }}
         onClick={() => { setSelectedSurah(null); setMushafMode(false); }}
       >
-        🕋 My Quran App
+        🕋 30 Juzuk
       </h1>
       <p style={{ textAlign: 'center', color: theme.textMuted, fontSize: '14px', marginTop: 0 }}>
-        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital dengan Tajwid Berwarna & Terjemahan Malaysia"}
+        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital 30 Juzuk — Tajwid Berwarna & Terjemahan Malaysia"}
       </p>
 
       {/* BAHARU: butang akses Mode Mushaf — hanya nampak di halaman senarai surah */}
