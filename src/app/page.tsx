@@ -16,18 +16,18 @@ export default function Home() {
       .catch(err => console.error(err));
   }, []);
 
-  // 2. Fungsi apabila surah diklik (Ambil ayat Arab + Terjemahan Malaysia)
+  // 2. Ambil ayat (Tajwid Word-by-Word + Terjemahan) apabila surah diklik
   const handleSurahClick = (surah: any) => {
     setSelectedSurah(surah);
     setVerses([]);
     setTranslations([]);
     setLoadingVerses(true);
 
-    // Ambil Teks Arab Uthmani
-    const fetchArabic = fetch(`https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=${surah.id}`)
+    // Ambil data perkataan yang mengandungi kod warna tajwed (perkataan demi perkataan)
+    const fetchArabic = fetch(`https://api.quran.com/api/v4/verses/by_chapter/${surah.id}?language=ms&words=true`)
       .then(res => res.json());
 
-    // Ambil Terjemahan Bahasa Melayu (ID Rasm/Resource 39 atau ID standard Malaysia)
+    // Ambil Terjemahan Bahasa Melayu 
     const fetchTranslation = fetch(`https://api.quran.com/api/v4/quran/translations/39?chapter_number=${surah.id}`)
       .then(res => res.json());
 
@@ -46,8 +46,7 @@ export default function Home() {
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      {/* Suntikan Link Font Digital Quran (Uthmanic) & Inter */}
-      <link relstyle={{display:'none'}} href="https://fonts.googleapis.com/css2?family=Amiri&family=Inter:wght@300;400;600&family=Noto+Naskh+Arabic:wght@500&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
 
       <h1 
         style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }} 
@@ -56,7 +55,7 @@ export default function Home() {
         🕋 My Quran App
       </h1>
       <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px', marginTop: 0 }}>
-        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Aplikasi Al-Quran Digital dengan Terjemahan Malaysia"}
+        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital dengan Tajwid Berwarna & Terjemahan Malaysia"}
       </p>
       
       <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
@@ -64,32 +63,35 @@ export default function Home() {
       {/* ----------------- PAPARAN ISI KANDUNGAN SURAH ----------------- */}
       {selectedSurah ? (
         <div>
-          {/* Header Info Surah ala Quran.com */}
+          {/* Header Info Surah */}
           <div style={{ backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
             <h2 style={{ color: '#0f766e', margin: '0 0 8px 0', fontSize: '24px' }}>{selectedSurah.name_complex}</h2>
             <div style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
-              <span>Sifat: {selectedSurah.revelation_place === 'makkah' ? 'Makkiyah' : 'Madaniyah'}</span>
+              <span>{selectedSurah.revelation_place === 'makkah' ? 'Makkiyah' : 'Madaniyah'}</span>
               <span style={{ margin: '0 10px' }}>•</span>
               <span>{selectedSurah.verses_count} Ayat</span>
             </div>
           </div>
 
           {loadingVerses ? (
-            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan ayat dan terjemahan...</p>
+            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan tajwid berwarna...</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               
-              {/* Paparan Bismillah untuk semua surah kecuali Al-Taubah */}
+              {/* Paparan Bismillah */}
               {selectedSurah.id !== 9 && (
-                <div style={{ textDirection: 'rtl', textAlign: 'center', fontSize: '28px', fontFamily: '"Noto Naskh Arabic", "Amiri", serif', padding: '20px 0', color: '#1e293b' }}>
-                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+                  <img 
+                    src="https://quran.com/images/bismillah.svg" 
+                    alt="Bismillah" 
+                    style={{ width: '250px', height: 'auto', filter: 'contrast(1.1)' }} 
+                  />
                 </div>
               )}
 
               {verses.map((verse: any, index: number) => {
-                // Padankan terjemahan mengikut urutan ayat
                 const translationText = translations[index]?.text || "Terjemahan tidak ditemui.";
-                const verseNumber = verse.verse_key.split(':')[1];
+                const verseNumber = verse.verse_number;
 
                 return (
                   <div 
@@ -102,41 +104,62 @@ export default function Home() {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                       display: 'flex', 
                       flexDirection: 'column', 
-                      gap: '20px' 
+                      gap: '25px' 
                     }}
                   >
-                    {/* Nombor Ayat (Label Tepi) */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* Petunjuk Nombor Ayat */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ backgroundColor: '#ccfbf1', color: '#0f766e', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
-                        {verse.verse_key}
+                        Ayat {selectedSurah.id}:{verseNumber}
                       </span>
                     </div>
 
-                    {/* Teks Arab (Font Quran.com Style) */}
+                    {/* Susunan Perkataan Tajwid Berwarna (Ikut stail quran.com) */}
                     <div 
-                      dir="rtl"
+                      dir="rtl" 
                       style={{ 
-                        fontSize: '32px', 
-                        fontFamily: '"Noto Naskh Arabic", "Amiri", serif', 
-                        lineHeight: '2.5', 
-                        color: '#0f172a',
-                        textAlign: 'right',
-                        fontWeight: '500'
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        rowGap: '20px', 
+                        columnGap: '6px', 
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
+                        lineHeight: '2.5'
                       }}
                     >
-                      {verse.text_uthmani} <span style={{ fontFamily: 'sans-serif', fontSize: '20px', color: '#0f766e', marginRight: '5px' }}>﴿{verseNumber}﴾</span>
+                      {verse.words?.map((word: any) => {
+                        // Jika perkataan ada kod warna tajwid (SVG)
+                        if (word.code_v1) {
+                          return (
+                            <span 
+                              key={word.id} 
+                              dangerouslySetInnerHTML={{ __html: word.code_v1 }}
+                              style={{ display: 'inline-block' }}
+                            />
+                          );
+                        }
+                        // Fallback jika tiada SVG tajwid
+                        return (
+                          <span key={word.id} style={{ fontSize: '30px', fontFamily: 'serif', color: '#0f172a' }}>
+                            {word.text}
+                          </span>
+                        );
+                      })}
+                      
+                      {/* Simbol Nombor Ayat di Hujung Ayat */}
+                      <span style={{ fontSize: '24px', color: '#0f766e', fontWeight: 'bold', fontFamily: 'sans-serif', marginRight: '10px' }}>
+                        ﴿{verseNumber}﴾
+                      </span>
                     </div>
 
-                    {/* Teks Terjemahan Bahasa Melayu */}
+                    {/* Terjemahan Bahasa Melayu */}
                     <div 
                       style={{ 
                         fontSize: '15px', 
                         color: '#334155', 
                         lineHeight: '1.6',
-                        textAlign: 'left',
-                        borderTop: '1px dashed #f1f5f9',
-                        paddingTop: '15px',
-                        fontWeight: '400'
+                        borderTop: '1px dashed #e2e8f0',
+                        paddingTop: '15px'
                       }}
                       dangerouslySetInnerHTML={{ __html: translationText }}
                     />
@@ -160,7 +183,6 @@ export default function Home() {
                 border: '1px solid #e2e8f0',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease-in-out',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '15px'
@@ -173,15 +195,12 @@ export default function Home() {
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = '#e2e8f0';
                 e.currentTarget.style.transform = 'translateY(0px)';
-                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              {/* Kotak Nombor Surah */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', backgroundColor: '#f1f5f9', borderRadius: '8px', fontSize: '14px', fontWeight: '600', color: '#475569' }}>
                 {surah.id}
               </div>
-              
-              {/* Nama Surah */}
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '16px' }}>{surah.name_complex}</div>
                 <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{surah.translated_name.name}</div>
