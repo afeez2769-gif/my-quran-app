@@ -299,13 +299,21 @@ export default function Home() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* Paparan Bismillah Versi Imej Cantik dari Quran.com */}
+              {/* BAHARU: Bismillah dipaparkan guna teks tajweed sendiri (bukan imej luar
+                  yang boleh rosak/404) — konsisten dengan font & warna ayat lain */}
               {selectedSurah.id !== 9 && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
-                  <img
-                    src="https://quran.com/images/bismillah.svg"
-                    alt="Bismillah"
-                    style={{ width: '280px', height: 'auto', filter: 'invert(31%) sepia(45%) saturate(795%) hue-rotate(125deg) brightness(95%) contrast(92%)' }}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 20px 0' }}>
+                  <div
+                    dir="rtl"
+                    style={{
+                      fontSize: '28px',
+                      fontFamily: "'UthmanicHafs', serif",
+                      textAlign: 'center',
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        'بِسْمِ <tajweed class="ham_wasl">ٱ</tajweed>للَّهِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda_normal">ـٰ</tajweed>نِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّح<tajweed class="madda_permissible">ِي</tajweed>مِ',
+                    }}
                   />
                 </div>
               )}
