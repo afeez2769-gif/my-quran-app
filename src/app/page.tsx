@@ -919,8 +919,11 @@ export default function Home() {
               )}
 
               {/* BAHARU: Bismillah dipaparkan guna teks tajweed sendiri (bukan imej luar
-                  yang boleh rosak/404) — hanya di muka pertama sahaja bila surah panjang */}
-              {selectedSurah.id !== 9 && versePage === 1 && (
+                  yang boleh rosak/404) — hanya di muka pertama sahaja bila surah panjang.
+                  Al-Fatihah (surah 1) & At-Tawbah (surah 9) dikecualikan — Al-Fatihah sebab
+                  Bismillah ITU SENDIRI ialah ayat 1 (jadi dah terpapar via senarai ayat),
+                  At-Tawbah sebab memang tiada Bismillah pembuka. */}
+              {selectedSurah.id !== 9 && selectedSurah.id !== 1 && versePage === 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 20px 0' }}>
                   <div
                     dir="rtl"
