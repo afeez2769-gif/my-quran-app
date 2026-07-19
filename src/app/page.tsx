@@ -2,9 +2,17 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-// Teks tajweed Bismillah — dikongsi antara paparan surah biasa & Mode Mushaf
-const BISMILLAH_HTML =
-  'بِسْمِ <tajweed class="ham_wasl">ٱ</tajweed>للَّهِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda_normal">ـٰ</tajweed>نِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّح<tajweed class="madda_permissible">ِي</tajweed>مِ';
+// BAHARU: Bismillah sebagai ARRAY perkataan (bukan satu string) — elak
+// pemecahan ikut ruang yang boleh musnahkan tag <tajweed class="..."> sendiri
+// (sebab ada ruang antara "tajweed" dan "class=..." dalam tag tu)
+const BISMILLAH_WORDS = [
+  'بِسْمِ',
+  '<tajweed class="ham_wasl">ٱ</tajweed>للَّهِ',
+  '<tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda_normal">ـٰ</tajweed>نِ',
+  '<tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّح<tajweed class="madda_permissible">ِي</tajweed>مِ',
+];
+// versi gabungan (untuk paparan surah biasa — dangerouslySetInnerHTML terus, bukan per-perkataan)
+const BISMILLAH_HTML = BISMILLAH_WORDS.join(' ');
 
 // BAHARU: titik permulaan setiap 30 juz (muka surat + baris tepat) — dari data QUL
 const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{"j":2,"p":22,"l":1},{"j":3,"p":42,"l":1},{"j":4,"p":62,"l":2},{"j":5,"p":82,"l":1},{"j":6,"p":102,"l":1},{"j":7,"p":121,"l":9},{"j":8,"p":142,"l":1},{"j":9,"p":162,"l":1},{"j":10,"p":182,"l":1},{"j":11,"p":201,"l":13},{"j":12,"p":222,"l":1},{"j":13,"p":242,"l":1},{"j":14,"p":262,"l":3},{"j":15,"p":282,"l":3},{"j":16,"p":302,"l":1},{"j":17,"p":322,"l":3},{"j":18,"p":342,"l":3},{"j":19,"p":362,"l":1},{"j":20,"p":382,"l":1},{"j":21,"p":402,"l":1},{"j":22,"p":422,"l":1},{"j":23,"p":442,"l":1},{"j":24,"p":462,"l":1},{"j":25,"p":482,"l":1},{"j":26,"p":502,"l":9},{"j":27,"p":522,"l":1},{"j":28,"p":542,"l":3},{"j":29,"p":562,"l":3},{"j":30,"p":582,"l":3}];
@@ -17,8 +25,7 @@ const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{
 const MUSHAF_BASE_FONT_SIZE = 26;
 const MUSHAF_MIN_FONT_SIZE = 13;
 
-function MushafLine({ html, centered }: { html: string; centered: boolean }) {
-  const words = html.split(' ').filter((w) => w.length > 0);
+function MushafLine({ words, centered }: { words: string[]; centered: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [fontSize, setFontSize] = useState(MUSHAF_BASE_FONT_SIZE);
@@ -27,6 +34,7 @@ function MushafLine({ html, centered }: { html: string; centered: boolean }) {
   // baris "centered" (ikut data QUL) atau baris satu-perkataan sahaja —
   // tak sesekali di-justify, cukup letak di tengah macam mushaf sebenar
   const canJustify = !centered && words.length > 1;
+  const wordsKey = words.join('|'); // rentetan stabil untuk dependency effect
 
   useEffect(() => {
     let cancelled = false;
@@ -74,7 +82,7 @@ function MushafLine({ html, centered }: { html: string; centered: boolean }) {
       cancelAnimationFrame(raf1);
       window.removeEventListener('resize', fit);
     };
-  }, [html, canJustify]);
+  }, [wordsKey, canJustify]);
 
   return (
     <div
@@ -534,7 +542,7 @@ export default function Home() {
                     <div key={idx}>
                       {juzBadge}
                       <div style={{ margin: '10px 0' }}>
-                        <MushafLine html={BISMILLAH_HTML} centered={true} />
+                        <MushafLine words={BISMILLAH_WORDS} centered={true} />
                       </div>
                     </div>
                   );
@@ -543,12 +551,11 @@ export default function Home() {
                 const lineWords = mushafWords && line.f && line.e
                   ? mushafWords.slice(line.f - 1, line.e)
                   : [];
-                const lineHtml = lineWords.join(' ');
 
                 return (
                   <div key={idx}>
                     {juzBadge}
-                    <MushafLine html={lineHtml} centered={!!line.c} />
+                    <MushafLine words={lineWords} centered={!!line.c} />
                   </div>
                 );
               })}
