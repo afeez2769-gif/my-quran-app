@@ -117,10 +117,36 @@ export default function Home() {
     setMushafMode(true);
   };
 
-  const goToPage = (page: number) => {
+  const goToPage = (page: number, direction: 'next' | 'prev' = 'next') => {
     const clamped = Math.min(604, Math.max(1, page));
+    if (clamped === currentPage) return;
+    setSlideDir(direction);
     setCurrentPage(clamped);
   };
+
+  // BAHARU: gerak isyarat swipe (selak) untuk Mode Mushaf
+  const [slideDir, setSlideDir] = useState<'next' | 'prev'>('next');
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const SWIPE_THRESHOLD = 50;
+
+    if (deltaX < -SWIPE_THRESHOLD) {
+      // jari gerak ke kiri -> muka surat seterusnya
+      goToPage(currentPage + 1, 'next');
+    } else if (deltaX > SWIPE_THRESHOLD) {
+      // jari gerak ke kanan -> muka surat sebelum
+      goToPage(currentPage - 1, 'prev');
+    }
+    touchStartX.current = null;
+  };
+  // -------------------------------------------------------------------------
 
   // baris untuk muka surat semasa sahaja (ditapis dari layout penuh)
   const currentPageLines = mushafLayout
@@ -336,6 +362,18 @@ export default function Home() {
           .mushaf-line { font-size: 22px; line-height: 2.1; }
           .mushaf-box { padding: 18px 10px !important; }
         }
+
+        /* BAHARU: animasi slide macam selak Quran sebenar */
+        @keyframes slideInNext {
+          from { transform: translateX(40px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideInPrev {
+          from { transform: translateX(-40px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .mushaf-box--slide-next { animation: slideInNext 0.22s ease-out; }
+        .mushaf-box--slide-prev { animation: slideInPrev 0.22s ease-out; }
       `}</style>
 
 
@@ -460,7 +498,7 @@ export default function Home() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
-                onClick={() => goToPage(currentPage - 1)}
+                onClick={() => goToPage(currentPage - 1, 'prev')}
                 disabled={currentPage <= 1}
                 style={{
                   padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
@@ -487,7 +525,7 @@ export default function Home() {
               </form>
 
               <button
-                onClick={() => goToPage(currentPage + 1)}
+                onClick={() => goToPage(currentPage + 1, 'next')}
                 disabled={currentPage >= 604}
                 style={{
                   padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
@@ -500,10 +538,20 @@ export default function Home() {
             </div>
           </div>
 
+          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '11px', margin: '0 0 10px 0' }}>
+            👆 Leret ke kiri/kanan pada teks untuk selak muka surat
+          </p>
+
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
-            <div className="mushaf-box" style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <div
+              key={currentPage}
+              className={`mushaf-box ${slideDir === 'next' ? 'mushaf-box--slide-next' : 'mushaf-box--slide-prev'}`}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', touchAction: 'pan-y' }}
+            >
               {currentPageLines.map((line: any, idx: number) => {
                 // BAHARU: semak kalau baris ni tempat permulaan mana-mana juz
                 const juzHere = JUZ_STARTS.find((j) => j.p === line.p && j.l === line.l);
