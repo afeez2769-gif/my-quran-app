@@ -9,46 +9,61 @@ const BISMILLAH_HTML =
 // BAHARU: titik permulaan setiap 30 juz (muka surat + baris tepat) — dari data QUL
 const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{"j":2,"p":22,"l":1},{"j":3,"p":42,"l":1},{"j":4,"p":62,"l":2},{"j":5,"p":82,"l":1},{"j":6,"p":102,"l":1},{"j":7,"p":121,"l":9},{"j":8,"p":142,"l":1},{"j":9,"p":162,"l":1},{"j":10,"p":182,"l":1},{"j":11,"p":201,"l":13},{"j":12,"p":222,"l":1},{"j":13,"p":242,"l":1},{"j":14,"p":262,"l":3},{"j":15,"p":282,"l":3},{"j":16,"p":302,"l":1},{"j":17,"p":322,"l":3},{"j":18,"p":342,"l":3},{"j":19,"p":362,"l":1},{"j":20,"p":382,"l":1},{"j":21,"p":402,"l":1},{"j":22,"p":422,"l":1},{"j":23,"p":442,"l":1},{"j":24,"p":462,"l":1},{"j":25,"p":482,"l":1},{"j":26,"p":502,"l":9},{"j":27,"p":522,"l":1},{"j":28,"p":542,"l":3},{"j":29,"p":562,"l":3},{"j":30,"p":582,"l":3}];
 
-// BAHARU: kawalan saiz PER BARIS — setiap baris ukur & kira saiz sendiri.
-// Kebanyakan baris kekal saiz asal (26px); cuma baris yang betul-betul
-// panjang je dikecilkan sikit supaya muat SATU baris (tak sesekali lipat).
-// Guna font-size terus (bukan transform:scale) — lebih mudah & tak
-// bermasalah dengan pusat/center macam pendekatan transform sebelum ni.
+// BAHARU: kawalan PER PERKATAAN + justify — teknik yang sama macam percetakan
+// mushaf sebenar. Saiz font KEKAL TETAP (26px); jarak ANTARA perkataan yang
+// diregangkan (justify) untuk penuhi lebar baris. Font cuma dikecilkan sebagai
+// LANGKAH TERAKHIR — hanya jika jumlah lebar perkataan sendiri (tanpa jarak
+// pun) dah melebihi ruang yang ada.
 const MUSHAF_BASE_FONT_SIZE = 26;
 const MUSHAF_MIN_FONT_SIZE = 13;
 
-function MushafLine({ html }: { html: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+function MushafLine({ html, centered }: { html: string; centered: boolean }) {
+  const words = html.split(' ').filter((w) => w.length > 0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [fontSize, setFontSize] = useState(MUSHAF_BASE_FONT_SIZE);
+  const [useJustify, setUseJustify] = useState(false);
+
+  // baris "centered" (ikut data QUL) atau baris satu-perkataan sahaja —
+  // tak sesekali di-justify, cukup letak di tengah macam mushaf sebenar
+  const canJustify = !centered && words.length > 1;
 
   useEffect(() => {
     let cancelled = false;
 
     function fit() {
       if (cancelled) return;
-      const el = ref.current;
-      const parent = el?.parentElement;
-      if (!el || !parent) return;
+      const container = containerRef.current;
+      if (!container) return;
 
-      // ukur pada saiz ASAS dahulu (elak "warisi" saiz kecil dari pengiraan lepas)
-      el.style.fontSize = `${MUSHAF_BASE_FONT_SIZE}px`;
-      const availableWidth = parent.clientWidth;
-      const naturalWidth = el.scrollWidth;
+      // ukur pada saiz ASAS dahulu
+      container.style.fontSize = `${MUSHAF_BASE_FONT_SIZE}px`;
+      const availableWidth = container.clientWidth;
 
-      if (naturalWidth > availableWidth && naturalWidth > 0) {
-        const ratio = availableWidth / naturalWidth;
-        setFontSize(Math.max(MUSHAF_MIN_FONT_SIZE, MUSHAF_BASE_FONT_SIZE * ratio));
-      } else {
+      // jumlahkan lebar SEMULA JADI setiap perkataan (tanpa jarak/gap)
+      let totalWordsWidth = 0;
+      wordRefs.current.forEach((el) => {
+        if (el) totalWordsWidth += el.getBoundingClientRect().width;
+      });
+
+      if (totalWordsWidth === 0) return;
+
+      if (totalWordsWidth <= availableWidth) {
+        // perkataan sendiri dah muat selesa — kekal saiz asas, regangkan jarak (justify)
         setFontSize(MUSHAF_BASE_FONT_SIZE);
+        setUseJustify(canJustify);
+      } else {
+        // langsung tak muat walaupun perkataan rapat — baru kecilkan font
+        const ratio = availableWidth / totalWordsWidth;
+        setFontSize(Math.max(MUSHAF_MIN_FONT_SIZE, MUSHAF_BASE_FONT_SIZE * ratio));
+        setUseJustify(false); // lepas dikecilkan, tiada baki ruang nak justify
       }
     }
 
-    // tunggu 2 frame supaya saiz asas sah-sah "dilukis" dulu sebelum diukur
     const raf1 = requestAnimationFrame(() => {
       requestAnimationFrame(fit);
     });
 
-    // ukur SEKALI LAGI bila font UthmanicHafs sah-sah selesai dimuat
     if (typeof document !== 'undefined' && 'fonts' in document) {
       document.fonts.ready.then(fit);
     }
@@ -59,20 +74,29 @@ function MushafLine({ html }: { html: string }) {
       cancelAnimationFrame(raf1);
       window.removeEventListener('resize', fit);
     };
-  }, [html]);
+  }, [html, canJustify]);
 
   return (
     <div
-      ref={ref}
+      ref={containerRef}
       dir="rtl"
       className="mushaf-line"
       style={{
-        textAlign: 'center',
+        display: 'flex',
+        justifyContent: useJustify ? 'space-between' : 'center',
+        width: '100%',
         whiteSpace: 'nowrap',
         fontSize: `${fontSize}px`,
       }}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    >
+      {words.map((word, i) => (
+        <span
+          key={i}
+          ref={(el) => { wordRefs.current[i] = el; }}
+          dangerouslySetInnerHTML={{ __html: word }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -510,7 +534,7 @@ export default function Home() {
                     <div key={idx}>
                       {juzBadge}
                       <div style={{ margin: '10px 0' }}>
-                        <MushafLine html={BISMILLAH_HTML} />
+                        <MushafLine html={BISMILLAH_HTML} centered={true} />
                       </div>
                     </div>
                   );
@@ -524,7 +548,7 @@ export default function Home() {
                 return (
                   <div key={idx}>
                     {juzBadge}
-                    <MushafLine html={lineHtml} />
+                    <MushafLine html={lineHtml} centered={!!line.c} />
                   </div>
                 );
               })}
