@@ -403,7 +403,7 @@ export default function Home() {
   // berasingan sepenuhnya dari layout app biasa (tiada header/logo/padding app)
   if (mushafMode) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: theme.bg, overflowY: 'auto', fontFamily: '"Inter", sans-serif', ['--mushaf-text-color' as any]: theme.text }}>
+      <div className={darkMode ? 'dark-theme' : ''} style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: theme.bg, overflowY: 'auto', fontFamily: '"Inter", sans-serif', ['--mushaf-text-color' as any]: theme.text }}>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
         <style jsx global>{`
           @font-face {
@@ -433,6 +433,14 @@ export default function Home() {
           tajweed[class="idgham_mutajanisayn"],
           tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
           tajweed[class="ghunnah"] { color: #FF7E1E; }
+
+          /* BAHARU: warna biru lebih cerah khas Mod Malam — warna asal
+             (madda_necessary #000EBC, madda_obligatory #2144C1) terlalu
+             gelap, hampir hilang atas latar navy gelap */
+          .dark-theme tajweed[class="madda_necessary"] { color: #5C7CFA; }
+          .dark-theme tajweed[class="madda_obligatory"],
+          .dark-theme tajweed[class="madda_obligatory_mottasel"],
+          .dark-theme tajweed[class="madda_obligatory_monfasel"] { color: #6C8EFF; }
 
           .mushaf-line {
             font-family: 'UthmanicHafs', serif;
@@ -679,7 +687,7 @@ export default function Home() {
   }
 
   return (
-    <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: theme.bg, minHeight: '100vh', color: theme.text }}>
+    <div className={darkMode ? 'dark-theme' : ''} style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: theme.bg, minHeight: '100vh', color: theme.text }}>
 
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
 
@@ -713,6 +721,12 @@ export default function Home() {
         tajweed[class="idgham_mutajanisayn"],
         tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
         tajweed[class="ghunnah"] { color: #FF7E1E; }
+
+        /* BAHARU: warna biru lebih cerah khas Mod Malam */
+        .dark-theme tajweed[class="madda_necessary"] { color: #5C7CFA; }
+        .dark-theme tajweed[class="madda_obligatory"],
+        .dark-theme tajweed[class="madda_obligatory_mottasel"],
+        .dark-theme tajweed[class="madda_obligatory_monfasel"] { color: #6C8EFF; }
       `}</style>
 
 
