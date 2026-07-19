@@ -228,6 +228,17 @@ export default function Home() {
   };
   // -------------------------------------------------------------------------
 
+  // --- BAHARU: pagination ayat untuk surah panjang (max 30 ayat/muka) -----
+  const VERSES_PER_PAGE = 30;
+  const [versePage, setVersePage] = useState(1);
+  const totalVersePages = Math.ceil(verses.length / VERSES_PER_PAGE) || 1;
+  const pagedVerses = verses.slice(
+    (versePage - 1) * VERSES_PER_PAGE,
+    versePage * VERSES_PER_PAGE
+  );
+  const versePageStartIndex = (versePage - 1) * VERSES_PER_PAGE; // untuk padankan index terjemahan sebenar
+  // -------------------------------------------------------------------------
+
   // 1. Ambil senarai surah
   useEffect(() => {
     fetch('https://api.quran.com/api/v4/chapters?language=ms')
@@ -243,6 +254,7 @@ export default function Home() {
     setTranslations([]);
     setRevealedAyahs(new Set()); // reset status hafazan bila tukar surah
     setMasteredAyahs(new Set());
+    setVersePage(1); // BAHARU: reset ke muka 1 bila buka surah baharu
     setLoadingVerses(true);
 
     if (user) {
@@ -685,9 +697,43 @@ export default function Home() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
+              {/* BAHARU: pagination ayat — hanya nampak kalau surah > 30 ayat */}
+              {totalVersePages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => setVersePage((p) => Math.max(1, p - 1))}
+                    disabled={versePage <= 1}
+                    style={{
+                      padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      cursor: versePage <= 1 ? 'not-allowed' : 'pointer', opacity: versePage <= 1 ? 0.4 : 1,
+                    }}
+                  >
+                    ◀ Sebelum
+                  </button>
+                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+                    Muka {versePage} / {totalVersePages}
+                    <span style={{ color: '#94a3b8', fontWeight: 400 }}>
+                      {' '}(Ayat {versePageStartIndex + 1}–{Math.min(versePageStartIndex + VERSES_PER_PAGE, verses.length)} dari {verses.length})
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => setVersePage((p) => Math.min(totalVersePages, p + 1))}
+                    disabled={versePage >= totalVersePages}
+                    style={{
+                      padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      cursor: versePage >= totalVersePages ? 'not-allowed' : 'pointer', opacity: versePage >= totalVersePages ? 0.4 : 1,
+                    }}
+                  >
+                    Seterusnya ▶
+                  </button>
+                </div>
+              )}
+
               {/* BAHARU: Bismillah dipaparkan guna teks tajweed sendiri (bukan imej luar
-                  yang boleh rosak/404) — konsisten dengan font & warna ayat lain */}
-              {selectedSurah.id !== 9 && (
+                  yang boleh rosak/404) — hanya di muka pertama sahaja bila surah panjang */}
+              {selectedSurah.id !== 9 && versePage === 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 20px 0' }}>
                   <div
                     dir="rtl"
@@ -701,7 +747,8 @@ export default function Home() {
                 </div>
               )}
 
-              {verses.map((verse: any, index: number) => {
+              {pagedVerses.map((verse: any, localIndex: number) => {
+                const index = versePageStartIndex + localIndex; // index sebenar dalam senarai penuh (untuk terjemahan)
                 const translationText = translations[index]?.text || "Terjemahan tidak ditemui.";
                 const verseNumber = verse.verse_key.split(':')[1];
                 const isRevealed = revealedAyahs.has(verse.id);
@@ -793,6 +840,37 @@ export default function Home() {
                   </div>
                 );
               })}
+
+              {/* BAHARU: pagination sekali lagi di bawah, untuk mudah lepas habis baca 30 ayat */}
+              {totalVersePages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', paddingTop: '10px' }}>
+                  <button
+                    onClick={() => { setVersePage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={versePage <= 1}
+                    style={{
+                      padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      cursor: versePage <= 1 ? 'not-allowed' : 'pointer', opacity: versePage <= 1 ? 0.4 : 1,
+                    }}
+                  >
+                    ◀ Sebelum
+                  </button>
+                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+                    Muka {versePage} / {totalVersePages}
+                  </span>
+                  <button
+                    onClick={() => { setVersePage((p) => Math.min(totalVersePages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    disabled={versePage >= totalVersePages}
+                    style={{
+                      padding: '6px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600, fontSize: '13px',
+                      cursor: versePage >= totalVersePages ? 'not-allowed' : 'pointer', opacity: versePage >= totalVersePages ? 0.4 : 1,
+                    }}
+                  >
+                    Seterusnya ▶
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
