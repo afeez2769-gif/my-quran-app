@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 // Teks tajweed Bismillah — dikongsi antara paparan surah biasa & Mode Mushaf
@@ -8,6 +8,70 @@ const BISMILLAH_HTML =
 
 // BAHARU: titik permulaan setiap 30 juz (muka surat + baris tepat) — dari data QUL
 const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{"j":2,"p":22,"l":1},{"j":3,"p":42,"l":1},{"j":4,"p":62,"l":2},{"j":5,"p":82,"l":1},{"j":6,"p":102,"l":1},{"j":7,"p":121,"l":9},{"j":8,"p":142,"l":1},{"j":9,"p":162,"l":1},{"j":10,"p":182,"l":1},{"j":11,"p":201,"l":13},{"j":12,"p":222,"l":1},{"j":13,"p":242,"l":1},{"j":14,"p":262,"l":3},{"j":15,"p":282,"l":3},{"j":16,"p":302,"l":1},{"j":17,"p":322,"l":3},{"j":18,"p":342,"l":3},{"j":19,"p":362,"l":1},{"j":20,"p":382,"l":1},{"j":21,"p":402,"l":1},{"j":22,"p":422,"l":1},{"j":23,"p":442,"l":1},{"j":24,"p":462,"l":1},{"j":25,"p":482,"l":1},{"j":26,"p":502,"l":9},{"j":27,"p":522,"l":1},{"j":28,"p":542,"l":3},{"j":29,"p":562,"l":3},{"j":30,"p":582,"l":3}];
+
+// BAHARU: komponen satu baris mushaf yang AUTO-FIT — ukur lebar sebenar
+// lepas render, dan kecilkan (scale) HANYA jika baris tu tak muat dalam
+// lebar skrin semasa. Ini jamin tiada ayat hilang/terlindung pada
+// mana-mana saiz skrin, sebab setiap baris diukur berasingan (bukan
+// satu saiz font seragam untuk semua baris).
+function MushafLine({
+  html,
+  centered,
+}: {
+  html: string;
+  centered: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    function fit() {
+      const container = containerRef.current;
+      const text = textRef.current;
+      if (!container || !text) return;
+
+      // ukur lebar SEBENAR baris (tanpa scale) berbanding lebar ruang yang ada
+      text.style.transform = 'scale(1)';
+      const availableWidth = container.clientWidth;
+      const naturalWidth = text.scrollWidth;
+
+      if (naturalWidth > availableWidth && naturalWidth > 0) {
+        setScale(availableWidth / naturalWidth);
+      } else {
+        setScale(1);
+      }
+    }
+
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [html]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
+        display: 'flex',
+        justifyContent: centered ? 'center' : 'flex-end', // RTL: mula dari kanan
+        overflow: 'visible',
+      }}
+    >
+      <div
+        ref={textRef}
+        dir="rtl"
+        className="mushaf-line"
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: 'right center',
+          whiteSpace: 'nowrap',
+        }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
+  );
+}
 
 export default function Home() {
   const [surahs, setSurahs] = useState<any[]>([]);
@@ -259,30 +323,21 @@ export default function Home() {
         tajweed[class="ghunnah"] { color: #FF7E1E; }
 
         /* BAHARU: gaya untuk Mode Mushaf baris-tepat.
-           font-size guna clamp() supaya automatik mengecil ikut lebar skrin
-           (26px di skrin lebar, susut ke 15px di skrin telefon sempit).
-           overflow-x:auto (bukan hidden) supaya kalau MASIH tak muat pun,
-           ayat boleh di-scroll — TAK PERNAH hilang/terlindung terus. */
+           font-size TETAP di sini — komponen MushafLine (React) yang uruskan
+           auto-scale ikut lebar sebenar setiap baris, jadi CSS ni cuma
+           tetapkan saiz "asal" sebelum di-scale. */
         .mushaf-line {
           font-family: 'UthmanicHafs', serif;
-          font-size: clamp(15px, 5.2vw, 26px);
+          font-size: 26px;
           line-height: 2.4;
-          direction: rtl;
-          white-space: nowrap;
-          overflow-x: auto;
-          overflow-y: hidden;
-          scrollbar-width: none; /* Firefox: sorok scrollbar tapi kekal boleh scroll */
-          -ms-overflow-style: none;
         }
-        .mushaf-line::-webkit-scrollbar { display: none; } /* Chrome/Safari: sorok scrollbar */
-        .mushaf-line--justify { text-align: justify; text-align-last: justify; }
-        .mushaf-line--center { text-align: center; }
 
         @media (max-width: 480px) {
-          .mushaf-line { line-height: 2.1; }
+          .mushaf-line { font-size: 22px; line-height: 2.1; }
           .mushaf-box { padding: 18px 10px !important; }
         }
       `}</style>
+
 
 
       {/* BAHARU: status log masuk di penjuru kanan atas */}
@@ -495,12 +550,9 @@ export default function Home() {
                   return (
                     <div key={idx}>
                       {juzBadge}
-                      <div
-                        dir="rtl"
-                        className="mushaf-line mushaf-line--center"
-                        style={{ margin: '10px 0' }}
-                        dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
-                      />
+                      <div style={{ margin: '10px 0' }}>
+                        <MushafLine html={BISMILLAH_HTML} centered={true} />
+                      </div>
                     </div>
                   );
                 }
@@ -514,11 +566,7 @@ export default function Home() {
                 return (
                   <div key={idx}>
                     {juzBadge}
-                    <div
-                      dir="rtl"
-                      className={`mushaf-line ${line.c ? 'mushaf-line--center' : 'mushaf-line--justify'}`}
-                      dangerouslySetInnerHTML={{ __html: lineHtml }}
-                    />
+                    <MushafLine html={lineHtml} centered={!!line.c} />
                   </div>
                 );
               })}
