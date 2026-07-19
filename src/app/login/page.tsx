@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <div style={pageStyle}>
       <form onSubmit={handleLogin} style={cardStyle}>
-        <h1 style={titleStyle}>🕋 Log Masuk</h1>
+        <h1 style={titleStyle}>🕋 Log Masuk ke 30 Juzuk</h1>
 
         <input
           type="email"
