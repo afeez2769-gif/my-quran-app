@@ -2,12 +2,55 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
+// Teks tajweed Bismillah — dikongsi antara paparan surah biasa & Mode Mushaf
+const BISMILLAH_HTML =
+  'بِسْمِ <tajweed class="ham_wasl">ٱ</tajweed>للَّهِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda_normal">ـٰ</tajweed>نِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّح<tajweed class="madda_permissible">ِي</tajweed>مِ';
+
 export default function Home() {
   const [surahs, setSurahs] = useState<any[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<any>(null);
   const [verses, setVerses] = useState<any[]>([]);
   const [translations, setTranslations] = useState<any[]>([]);
   const [loadingVerses, setLoadingVerses] = useState<boolean>(false);
+
+  // --- BAHARU: Mode Mushaf (baca ikut 604 muka surat sebenar) ------------
+  const [mushafMode, setMushafMode] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageVerses, setPageVerses] = useState<any[]>([]);
+  const [loadingPage, setLoadingPage] = useState<boolean>(false);
+  const [pageInput, setPageInput] = useState<string>('1');
+
+  const fetchMushafPage = (pageNumber: number) => {
+    setLoadingPage(true);
+    fetch(`https://api.quran.com/api/v4/verses/by_page/${pageNumber}?fields=text_uthmani_tajweed`)
+      .then(res => res.json())
+      .then(data => {
+        setPageVerses(data.verses || []);
+        setLoadingPage(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoadingPage(false);
+      });
+  };
+
+  useEffect(() => {
+    if (mushafMode) {
+      fetchMushafPage(currentPage);
+      setPageInput(String(currentPage));
+    }
+  }, [mushafMode, currentPage]);
+
+  const openMushafMode = () => {
+    setSelectedSurah(null);
+    setMushafMode(true);
+  };
+
+  const goToPage = (page: number) => {
+    const clamped = Math.min(604, Math.max(1, page));
+    setCurrentPage(clamped);
+  };
+  // -------------------------------------------------------------------------
 
   // --- BAHARU: status log masuk & progress hafazan -----------------------
   const [user, setUser] = useState<any>(null);
@@ -231,7 +274,7 @@ export default function Home() {
 
       <h1
         style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }}
-        onClick={() => setSelectedSurah(null)}
+        onClick={() => { setSelectedSurah(null); setMushafMode(false); }}
       >
         🕋 My Quran App
       </h1>
@@ -239,10 +282,134 @@ export default function Home() {
         {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital dengan Tajwid Berwarna & Terjemahan Malaysia"}
       </p>
 
+      {/* BAHARU: butang akses Mode Mushaf — hanya nampak di halaman senarai surah */}
+      {!mushafMode && !selectedSurah && (
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
+          <button
+            onClick={openMushafMode}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '20px',
+              border: '1px solid #0f766e',
+              backgroundColor: '#ffffff',
+              color: '#0f766e',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            📖 Mode Mushaf — Baca Ikut Muka Surat Sebenar
+          </button>
+        </div>
+      )}
+
       <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
 
-      {/* ----------------- PAPARAN ISI KANDUNGAN SURAH ----------------- */}
-      {selectedSurah ? (
+      {/* ----------------- MODE MUSHAF (604 muka surat) ----------------- */}
+      {mushafMode ? (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <button
+              onClick={() => setMushafMode(false)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#475569',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              ⬅️ Keluar Mode Mushaf
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
+                  cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', opacity: currentPage <= 1 ? 0.4 : 1,
+                }}
+              >
+                ◀
+              </button>
+
+              <form
+                onSubmit={(e) => { e.preventDefault(); goToPage(Number(pageInput)); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={604}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', textAlign: 'center' }}
+                />
+                <span style={{ fontSize: '13px', color: '#64748b' }}>/ 604</span>
+              </form>
+
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage >= 604}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff', color: '#0f766e', fontWeight: 600,
+                  cursor: currentPage >= 604 ? 'not-allowed' : 'pointer', opacity: currentPage >= 604 ? 0.4 : 1,
+                }}
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+
+          {loadingPage ? (
+            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan muka surat...</p>
+          ) : (
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '40px 30px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+              {pageVerses[0]?.juz_number && (
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12px', marginBottom: '20px', letterSpacing: '0.5px' }}>
+                  JUZUK {pageVerses[0].juz_number}
+                </p>
+              )}
+
+              <div dir="rtl" style={{ fontFamily: "'UthmanicHafs', serif", fontSize: '26px', lineHeight: '2.6', textAlign: 'justify' }}>
+                {pageVerses.map((verse: any) => {
+                  const isNewSurah = verse.verse_number === 1;
+                  const surahInfo = surahs.find((s: any) => s.id === verse.chapter_id);
+
+                  return (
+                    <span key={verse.id}>
+                      {isNewSurah && surahInfo && (
+                        <span
+                          dir="ltr"
+                          style={{ display: 'block', textAlign: 'center', margin: '20px 0', fontFamily: '"Inter", sans-serif' }}
+                        >
+                          <span style={{ display: 'block', color: '#0f766e', fontWeight: 700, fontSize: '20px' }}>
+                            {surahInfo.name_complex}
+                          </span>
+                          {verse.chapter_id !== 9 && (
+                            <span
+                              dir="rtl"
+                              style={{ display: 'block', fontFamily: "'UthmanicHafs', serif", fontSize: '24px', marginTop: '10px' }}
+                              dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
+                            />
+                          )}
+                        </span>
+                      )}
+                      <span dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed + ' ' }} />
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : selectedSurah ? (
         <div>
           {/* Header Info Surah */}
           <div style={{ backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
@@ -310,10 +477,7 @@ export default function Home() {
                       fontFamily: "'UthmanicHafs', serif",
                       textAlign: 'center',
                     }}
-                    dangerouslySetInnerHTML={{
-                      __html:
-                        'بِسْمِ <tajweed class="ham_wasl">ٱ</tajweed>للَّهِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّحْمَ<tajweed class="madda_normal">ـٰ</tajweed>نِ <tajweed class="ham_wasl">ٱ</tajweed><tajweed class="laam_shamsiyah">ل</tajweed>رَّح<tajweed class="madda_permissible">ِي</tajweed>مِ',
-                    }}
+                    dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
                   />
                 </div>
               )}
