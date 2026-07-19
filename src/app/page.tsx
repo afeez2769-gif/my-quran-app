@@ -8,7 +8,7 @@ export default function Home() {
   const [translations, setTranslations] = useState<any[]>([]);
   const [loadingVerses, setLoadingVerses] = useState<boolean>(false);
 
-  // 1. Ambil senarai surah semasa aplikasi dibuka
+  // 1. Ambil senarai surah
   useEffect(() => {
     fetch('https://api.quran.com/api/v4/chapters?language=ms')
       .then(res => res.json())
@@ -16,18 +16,16 @@ export default function Home() {
       .catch(err => console.error(err));
   }, []);
 
-  // 2. Ambil ayat (Tajwid Word-by-Word + Terjemahan) apabila surah diklik
+  // 2. Ambil Ayat Arab + Terjemahan Malaysia
   const handleSurahClick = (surah: any) => {
     setSelectedSurah(surah);
     setVerses([]);
     setTranslations([]);
     setLoadingVerses(true);
 
-    // Ambil data perkataan yang mengandungi kod warna tajwed (perkataan demi perkataan)
-    const fetchArabic = fetch(`https://api.quran.com/api/v4/verses/by_chapter/${surah.id}?language=ms&words=true`)
+    const fetchArabic = fetch(`https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=${surah.id}`)
       .then(res => res.json());
 
-    // Ambil Terjemahan Bahasa Melayu 
     const fetchTranslation = fetch(`https://api.quran.com/api/v4/quran/translations/39?chapter_number=${surah.id}`)
       .then(res => res.json());
 
@@ -46,7 +44,8 @@ export default function Home() {
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
+      {/* Memasukkan font Amiri & Noto Naskh Arabic yang sangat cantik dan stabil untuk teks Quran */}
+      <link href="https://fonts.googleapis.com/css2?family=Amiri:ital@0;1&family=Inter:wght@300;400;600;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet" />
 
       <h1 
         style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }} 
@@ -55,7 +54,7 @@ export default function Home() {
         🕋 My Quran App
       </h1>
       <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px', marginTop: 0 }}>
-        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital dengan Tajwid Berwarna & Terjemahan Malaysia"}
+        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Aplikasi Al-Quran Digital dengan Terjemahan Malaysia"}
       </p>
       
       <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
@@ -74,24 +73,20 @@ export default function Home() {
           </div>
 
           {loadingVerses ? (
-            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan tajwid berwarna...</p>
+            <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan ayat...</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* Paparan Bismillah */}
+              {/* Paparan Bismillah guna Teks Font Cantik (Kecuali Al-Taubah) */}
               {selectedSurah.id !== 9 && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
-                  <img 
-                    src="https://quran.com/images/bismillah.svg" 
-                    alt="Bismillah" 
-                    style={{ width: '250px', height: 'auto', filter: 'contrast(1.1)' }} 
-                  />
+                <div style={{ textDirection: 'rtl', textAlign: 'center', fontSize: '36px', fontFamily: '"Noto Naskh Arabic", "Amiri", serif', padding: '20px 0', color: '#0f766e', direction: 'rtl' }}>
+                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                 </div>
               )}
 
               {verses.map((verse: any, index: number) => {
                 const translationText = translations[index]?.text || "Terjemahan tidak ditemui.";
-                const verseNumber = verse.verse_number;
+                const verseNumber = verse.verse_key.split(':')[1];
 
                 return (
                   <div 
@@ -104,62 +99,40 @@ export default function Home() {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                       display: 'flex', 
                       flexDirection: 'column', 
-                      gap: '25px' 
+                      gap: '20px' 
                     }}
                   >
-                    {/* Petunjuk Nombor Ayat */}
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ backgroundColor: '#ccfbf1', color: '#0f766e', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
-                        Ayat {selectedSurah.id}:{verseNumber}
+                        Ayat {verse.verse_key}
                       </span>
                     </div>
 
-                    {/* Susunan Perkataan Tajwid Berwarna (Ikut stail quran.com) */}
+                    {/* Teks Arab Resam Uthmani yang padat dan kemas */}
                     <div 
-                      dir="rtl" 
+                      dir="rtl"
                       style={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
-                        rowGap: '20px', 
-                        columnGap: '6px', 
-                        justifyContent: 'flex-start',
-                        alignItems: 'center',
-                        lineHeight: '2.5'
+                        fontSize: '36px', 
+                        fontFamily: '"Noto Naskh Arabic", "Amiri", serif', 
+                        lineHeight: '2.5', 
+                        color: '#0f172a',
+                        textAlign: 'right',
+                        fontWeight: '500',
+                        direction: 'rtl'
                       }}
                     >
-                      {verse.words?.map((word: any) => {
-                        // Jika perkataan ada kod warna tajwid (SVG)
-                        if (word.code_v1) {
-                          return (
-                            <span 
-                              key={word.id} 
-                              dangerouslySetInnerHTML={{ __html: word.code_v1 }}
-                              style={{ display: 'inline-block' }}
-                            />
-                          );
-                        }
-                        // Fallback jika tiada SVG tajwid
-                        return (
-                          <span key={word.id} style={{ fontSize: '30px', fontFamily: 'serif', color: '#0f172a' }}>
-                            {word.text}
-                          </span>
-                        );
-                      })}
-                      
-                      {/* Simbol Nombor Ayat di Hujung Ayat */}
-                      <span style={{ fontSize: '24px', color: '#0f766e', fontWeight: 'bold', fontFamily: 'sans-serif', marginRight: '10px' }}>
-                        ﴿{verseNumber}﴾
-                      </span>
+                      {verse.text_uthmani} <span style={{ fontFamily: 'sans-serif', fontSize: '20px', color: '#0f766e', marginRight: '10px' }}>﴿{verseNumber}﴾</span>
                     </div>
 
-                    {/* Terjemahan Bahasa Melayu */}
+                    {/* Terjemahan Melayu */}
                     <div 
                       style={{ 
                         fontSize: '15px', 
                         color: '#334155', 
                         lineHeight: '1.6',
                         borderTop: '1px dashed #e2e8f0',
-                        paddingTop: '15px'
+                        paddingTop: '15px',
+                        textAlign: 'left'
                       }}
                       dangerouslySetInnerHTML={{ __html: translationText }}
                     />
