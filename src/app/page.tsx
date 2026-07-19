@@ -175,6 +175,29 @@ export default function Home() {
     }
     return map;
   }, [mushafLayout]);
+
+  // BAHARU: surah & juzuk yang sedang aktif di muka surat semasa (untuk footer)
+  const currentSurahInfo = useMemo(() => {
+    const entries = Object.entries(surahStartPages)
+      .map(([id, page]) => ({ id: Number(id), page: page as number }))
+      .sort((a, b) => a.page - b.page);
+
+    let active = entries[0];
+    for (const e of entries) {
+      if (e.page <= currentPage) active = e;
+      else break;
+    }
+    return active ? surahs.find((s: any) => s.id === active.id) : null;
+  }, [surahStartPages, currentPage, surahs]);
+
+  const currentJuzNumber = useMemo(() => {
+    let active = JUZ_STARTS[0];
+    for (const j of JUZ_STARTS) {
+      if (j.p <= currentPage) active = j;
+      else break;
+    }
+    return active ? active.j : 1;
+  }, [currentPage]);
   // -------------------------------------------------------------------------
 
   // --- BAHARU: status log masuk & progress hafazan -----------------------
@@ -547,6 +570,16 @@ export default function Home() {
               })}
             </div>
           )}
+
+          {/* BAHARU: footer kecil — surah, muka surat, juzuk semasa */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif' }}>
+            <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+              Muka Surat {currentPage}
+            </span>
+            <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+              {currentSurahInfo?.name_complex || ''} • Juzuk {currentJuzNumber}
+            </span>
+          </div>
         </div>
       </div>
     );
