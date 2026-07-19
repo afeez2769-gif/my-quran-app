@@ -9,11 +9,10 @@ const BISMILLAH_HTML =
 // BAHARU: titik permulaan setiap 30 juz (muka surat + baris tepat) — dari data QUL
 const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{"j":2,"p":22,"l":1},{"j":3,"p":42,"l":1},{"j":4,"p":62,"l":2},{"j":5,"p":82,"l":1},{"j":6,"p":102,"l":1},{"j":7,"p":121,"l":9},{"j":8,"p":142,"l":1},{"j":9,"p":162,"l":1},{"j":10,"p":182,"l":1},{"j":11,"p":201,"l":13},{"j":12,"p":222,"l":1},{"j":13,"p":242,"l":1},{"j":14,"p":262,"l":3},{"j":15,"p":282,"l":3},{"j":16,"p":302,"l":1},{"j":17,"p":322,"l":3},{"j":18,"p":342,"l":3},{"j":19,"p":362,"l":1},{"j":20,"p":382,"l":1},{"j":21,"p":402,"l":1},{"j":22,"p":422,"l":1},{"j":23,"p":442,"l":1},{"j":24,"p":462,"l":1},{"j":25,"p":482,"l":1},{"j":26,"p":502,"l":9},{"j":27,"p":522,"l":1},{"j":28,"p":542,"l":3},{"j":29,"p":562,"l":3},{"j":30,"p":582,"l":3}];
 
-// BAHARU: komponen satu baris mushaf yang AUTO-FIT — ukur lebar sebenar
-// lepas render, dan kecilkan (scale) HANYA jika baris tu tak muat dalam
-// lebar skrin semasa. Ini jamin tiada ayat hilang/terlindung pada
-// mana-mana saiz skrin, sebab setiap baris diukur berasingan (bukan
-// satu saiz font seragam untuk semua baris).
+// BAHARU: dipermudahkan — buang logik JS "scale ikut ukuran" (berisiko timing/
+// tak boleh dipercayai 100% pada semua peranti). Sebaliknya biar baris LIPAT
+// (wrap) secara semula jadi kalau betul-betul tak muat — dijamin CSS browser
+// sendiri yang uruskan, tiada risiko ayat hilang/tertutup langsung.
 function MushafLine({
   html,
   centered,
@@ -21,68 +20,16 @@ function MushafLine({
   html: string;
   centered: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    function fit() {
-      if (cancelled) return;
-      const container = containerRef.current;
-      const text = textRef.current;
-      if (!container || !text) return;
-
-      // ukur lebar SEBENAR baris (tanpa scale) berbanding lebar ruang yang ada
-      text.style.transform = 'scale(1)';
-      const availableWidth = container.clientWidth;
-      const naturalWidth = text.scrollWidth;
-
-      if (naturalWidth > availableWidth && naturalWidth > 0) {
-        setScale(availableWidth / naturalWidth);
-      } else {
-        setScale(1);
-      }
-    }
-
-    // BAHARU: ukur serta-merta (untuk kes font dah cache/load), DAN ukur SEKALI LAGI
-    // bila font UthmanicHafs sah-sah selesai dimuat (elak overflow sebab ukur
-    // guna font fallback yang lebih nipis sebelum font sebenar load)
-    fit();
-    if (typeof document !== 'undefined' && 'fonts' in document) {
-      document.fonts.ready.then(fit);
-    }
-
-    window.addEventListener('resize', fit);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('resize', fit);
-    };
-  }, [html]);
-
   return (
     <div
-      ref={containerRef}
+      dir="rtl"
+      className="mushaf-line"
       style={{
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center', // BAHARU: sentiasa tengah, elak nampak "tersadai" ke satu sisi bila di-scale
-        overflow: 'hidden', // jaringan keselamatan: walaupun scale tersasar seketika, tak sesekali overflow skrin
+        textAlign: 'center',
+        whiteSpace: 'normal', // benarkan wrap kalau perlu (fallback selamat)
       }}
-    >
-      <div
-        ref={textRef}
-        dir="rtl"
-        className="mushaf-line"
-        style={{
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
-          whiteSpace: 'nowrap',
-        }}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </div>
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
@@ -360,13 +307,15 @@ export default function Home() {
 
           .mushaf-line {
             font-family: 'UthmanicHafs', serif;
-            font-size: 26px;
-            line-height: 2.4;
+            font-size: clamp(16px, 4.8vw, 26px);
+            line-height: 2.3;
+            word-spacing: -1px; /* elak jurang perkataan terlalu besar bila wrap */
           }
 
+          .mushaf-box { padding: 30px 25px; }
+
           @media (max-width: 480px) {
-            .mushaf-line { font-size: 22px; line-height: 2.1; }
-            .mushaf-box { padding: 18px 10px !important; }
+            .mushaf-box { padding: 16px 8px !important; }
           }
         `}</style>
 
@@ -463,7 +412,7 @@ export default function Home() {
           ) : (
             <div
               className="mushaf-box"
-              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+              style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
             >
               {currentPageLines.map((line: any, idx: number) => {
                 const juzHere = JUZ_STARTS.find((j) => j.p === line.p && j.l === line.l);
@@ -603,21 +552,6 @@ export default function Home() {
         tajweed[class="idgham_mutajanisayn"],
         tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
         tajweed[class="ghunnah"] { color: #FF7E1E; }
-
-        /* BAHARU: gaya untuk Mode Mushaf baris-tepat.
-           font-size TETAP di sini — komponen MushafLine (React) yang uruskan
-           auto-scale ikut lebar sebenar setiap baris, jadi CSS ni cuma
-           tetapkan saiz "asal" sebelum di-scale. */
-        .mushaf-line {
-          font-family: 'UthmanicHafs', serif;
-          font-size: 26px;
-          line-height: 2.4;
-        }
-
-        @media (max-width: 480px) {
-          .mushaf-line { font-size: 22px; line-height: 2.1; }
-          .mushaf-box { padding: 18px 10px !important; }
-        }
       `}</style>
 
 
