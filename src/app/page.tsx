@@ -539,9 +539,22 @@ export default function Home() {
                   return (
                     <div key={idx}>
                       {juzBadge}
-                      <div style={{ textAlign: 'center', margin: '16px 0', fontFamily: '"Inter", sans-serif' }}>
-                        <div style={{ display: 'inline-block', padding: '6px 24px', border: '1px solid #0f766e', borderRadius: '8px', color: '#0f766e', fontWeight: 700, fontSize: '17px' }}>
-                          {surahInfo?.name_complex || `Surah ${line.s}`}
+                      <div style={{ textAlign: 'center', margin: '16px 0' }}>
+                        <div style={{
+                          display: 'inline-flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '3px',
+                          padding: '8px 26px',
+                          border: '1px solid #0f766e',
+                          borderRadius: '8px',
+                        }}>
+                          <div dir="rtl" style={{ fontFamily: "'UthmanicHafs', serif", fontSize: '23px', color: '#0f766e', fontWeight: 700 }}>
+                            {surahInfo?.name_arabic || ''}
+                          </div>
+                          <div style={{ fontFamily: '"Inter", sans-serif', fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                            {surahInfo?.name_complex || `Surah ${line.s}`}
+                          </div>
                         </div>
                       </div>
                     </div>
