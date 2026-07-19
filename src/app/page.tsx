@@ -245,18 +245,32 @@ export default function Home() {
         tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
         tajweed[class="ghunnah"] { color: #FF7E1E; }
 
-        /* BAHARU: gaya untuk Mode Mushaf baris-tepat */
+        /* BAHARU: gaya untuk Mode Mushaf baris-tepat.
+           font-size guna clamp() supaya automatik mengecil ikut lebar skrin
+           (26px di skrin lebar, susut ke 15px di skrin telefon sempit).
+           overflow-x:auto (bukan hidden) supaya kalau MASIH tak muat pun,
+           ayat boleh di-scroll — TAK PERNAH hilang/terlindung terus. */
         .mushaf-line {
           font-family: 'UthmanicHafs', serif;
-          font-size: 26px;
+          font-size: clamp(15px, 5.2vw, 26px);
           line-height: 2.4;
           direction: rtl;
           white-space: nowrap;
-          overflow: hidden;
+          overflow-x: auto;
+          overflow-y: hidden;
+          scrollbar-width: none; /* Firefox: sorok scrollbar tapi kekal boleh scroll */
+          -ms-overflow-style: none;
         }
+        .mushaf-line::-webkit-scrollbar { display: none; } /* Chrome/Safari: sorok scrollbar */
         .mushaf-line--justify { text-align: justify; text-align-last: justify; }
         .mushaf-line--center { text-align: center; }
+
+        @media (max-width: 480px) {
+          .mushaf-line { line-height: 2.1; }
+          .mushaf-box { padding: 18px 10px !important; }
+        }
       `}</style>
+
 
       {/* BAHARU: status log masuk di penjuru kanan atas */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
@@ -395,7 +409,7 @@ export default function Home() {
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
-            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <div className="mushaf-box" style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '30px 25px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
               {currentPageLines.map((line: any, idx: number) => {
                 if (line.t === 'surah_name') {
                   const surahInfo = surahs.find((s: any) => s.id === line.s);
