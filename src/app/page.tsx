@@ -796,6 +796,14 @@ export default function Home() {
         {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital 30 Juzuk — Tajwid Berwarna & Terjemahan Malaysia"}
       </p>
 
+      {!selectedSurah && !mushafMode && (
+        <div style={{ textAlign: 'center', marginTop: '2px' }}>
+          <a href="/about" style={{ fontSize: '12px', color: theme.textMuted, textDecoration: 'underline' }}>
+            ℹ️ Tentang 30 Juzuk
+          </a>
+        </div>
+      )}
+
       {/* BAHARU: butang akses Mode Mushaf — hanya nampak di halaman senarai surah */}
       {!selectedSurah && (
         <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
