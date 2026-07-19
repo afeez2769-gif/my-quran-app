@@ -131,7 +131,7 @@ export default function AboutPage() {
         <img
           src="/donation-qr.png"
           alt="QR Kod DuitNow untuk sumbangan"
-          style={{ width: '220px', maxWidth: '100%', borderRadius: '12px', border: `1px solid ${theme.border}` }}
+          style={{ display: 'block', margin: '0 auto', width: '220px', maxWidth: '100%', borderRadius: '12px', border: `1px solid ${theme.border}` }}
         />
 
         <p style={{ fontSize: '12px', color: theme.textMuted, marginTop: '14px' }}>
