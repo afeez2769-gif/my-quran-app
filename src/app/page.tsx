@@ -8,6 +8,25 @@ export default function Home() {
   const [translations, setTranslations] = useState<any[]>([]);
   const [loadingVerses, setLoadingVerses] = useState<boolean>(false);
 
+  // --- BAHARU: kawalan Papar Terjemahan & Mode Hafazan -------------------
+  const [showTranslation, setShowTranslation] = useState<boolean>(true);
+  const [hafazanMode, setHafazanMode] = useState<boolean>(false);
+  // simpan id ayat yang sudah "dibuka" (tekan untuk jelaskan) dalam Mode Hafazan
+  const [revealedAyahs, setRevealedAyahs] = useState<Set<number>>(new Set());
+
+  const toggleReveal = (verseId: number) => {
+    setRevealedAyahs((prev) => {
+      const next = new Set(prev);
+      if (next.has(verseId)) {
+        next.delete(verseId);
+      } else {
+        next.add(verseId);
+      }
+      return next;
+    });
+  };
+  // -------------------------------------------------------------------------
+
   // 1. Ambil senarai surah
   useEffect(() => {
     fetch('https://api.quran.com/api/v4/chapters?language=ms')
@@ -16,15 +35,17 @@ export default function Home() {
       .catch(err => console.error(err));
   }, []);
 
-  // 2. Ambil Ayat + Terjemahan Malaysia
+  // 2. Ambil Ayat (Tajweed Berwarna) + Terjemahan Malaysia
   const handleSurahClick = (surah: any) => {
     setSelectedSurah(surah);
     setVerses([]);
     setTranslations([]);
+    setRevealedAyahs(new Set()); // reset status hafazan bila tukar surah
     setLoadingVerses(true);
 
-    // Ambil data ayat standard untuk dapatkan susunan ayat
-    const fetchArabic = fetch(`https://api.quran.com/api/v4/quran/verses/uthmani?chapter_number=${surah.id}`)
+    // BAHARU: guna endpoint uthmani_tajweed — pulangkan HTML tajweed terus
+    // (bukan uthmani biasa), jadi tak perlu imej / parser tambahan
+    const fetchArabic = fetch(`https://api.quran.com/api/v4/quran/verses/uthmani_tajweed?chapter_number=${surah.id}`)
       .then(res => res.json());
 
     // Ambil Terjemahan Bahasa Melayu
@@ -45,11 +66,33 @@ export default function Home() {
 
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-      
+
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
 
-      <h1 
-        style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }} 
+      {/* BAHARU: warna rasmi tajweed — diletak sebagai global style supaya
+          terpakai pada HTML dari dangerouslySetInnerHTML (<tajweed class=...>) */}
+      <style jsx global>{`
+        tajweed[class="ham_wasl"],
+        tajweed[class="slnt"],
+        tajweed[class="laam_shamsiyah"] { color: #AAAAAA; }
+        tajweed[class="madda_normal"] { color: #537FFF; }
+        tajweed[class="madda_permissible"] { color: #4050FF; }
+        tajweed[class="madda_necessary"] { color: #000EBC; }
+        tajweed[class="madda_obligatory"] { color: #2144C1; }
+        tajweed[class="qalqalah"] { color: #DD0008; }
+        tajweed[class="ikhafa_shafawi"] { color: #D500B7; }
+        tajweed[class="ikhafa"] { color: #9400A8; }
+        tajweed[class="idgham_shafawi"] { color: #58B800; }
+        tajweed[class="iqlab"] { color: #26BFFD; }
+        tajweed[class="idgham_ghunnah"] { color: #169777; }
+        tajweed[class="idgham_no_ghunnah"] { color: #169200; }
+        tajweed[class="idgham_mutajanisayn"],
+        tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
+        tajweed[class="ghunnah"] { color: #FF7E1E; }
+      `}</style>
+
+      <h1
+        style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }}
         onClick={() => setSelectedSurah(null)}
       >
         🕋 My Quran App
@@ -57,7 +100,7 @@ export default function Home() {
       <p style={{ textAlign: 'center', color: '#64748b', fontSize: '14px', marginTop: 0 }}>
         {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital dengan Tajwid Berwarna & Terjemahan Malaysia"}
       </p>
-      
+
       <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '20px 0' }} />
 
       {/* ----------------- PAPARAN ISI KANDUNGAN SURAH ----------------- */}
@@ -71,20 +114,60 @@ export default function Home() {
               <span style={{ margin: '0 10px' }}>•</span>
               <span>{selectedSurah.verses_count} Ayat</span>
             </div>
+
+            {/* BAHARU: togol Papar Terjemahan & Mode Hafazan */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setShowTranslation((v) => !v)}
+                disabled={hafazanMode}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  border: '1px solid #0f766e',
+                  backgroundColor: showTranslation && !hafazanMode ? '#0f766e' : '#ffffff',
+                  color: showTranslation && !hafazanMode ? '#ffffff' : '#0f766e',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: hafazanMode ? 'not-allowed' : 'pointer',
+                  opacity: hafazanMode ? 0.5 : 1,
+                }}
+              >
+                {showTranslation ? '✓ ' : ''}Papar Terjemahan
+              </button>
+
+              <button
+                onClick={() => {
+                  setHafazanMode((v) => !v);
+                  setRevealedAyahs(new Set()); // mula semula blur bila togol mode
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  border: '1px solid #b45309',
+                  backgroundColor: hafazanMode ? '#b45309' : '#ffffff',
+                  color: hafazanMode ? '#ffffff' : '#b45309',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {hafazanMode ? '✓ ' : ''}Mode Hafazan
+              </button>
+            </div>
           </div>
 
           {loadingVerses ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan tajwid berwarna...</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-              
+
               {/* Paparan Bismillah Versi Imej Cantik dari Quran.com */}
               {selectedSurah.id !== 9 && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
-                  <img 
-                    src="https://quran.com/images/bismillah.svg" 
-                    alt="Bismillah" 
-                    style={{ width: '280px', height: 'auto', filter: 'invert(31%) sepia(45%) saturate(795%) hue-rotate(125deg) brightness(95%) contrast(92%)' }} 
+                  <img
+                    src="https://quran.com/images/bismillah.svg"
+                    alt="Bismillah"
+                    style={{ width: '280px', height: 'auto', filter: 'invert(31%) sepia(45%) saturate(795%) hue-rotate(125deg) brightness(95%) contrast(92%)' }}
                   />
                 </div>
               )}
@@ -92,65 +175,66 @@ export default function Home() {
               {verses.map((verse: any, index: number) => {
                 const translationText = translations[index]?.text || "Terjemahan tidak ditemui.";
                 const verseNumber = verse.verse_key.split(':')[1];
-
-                // Membina URL imej tajwid rasmi untuk setiap ayat dari quran.com
-                const tajweedImageUrl = `https://cstatic.quran.com/images/tajweed/${selectedSurah.id}/${verseNumber}.png`;
+                const isRevealed = revealedAyahs.has(verse.id);
+                const isBlurred = hafazanMode && !isRevealed;
 
                 return (
-                  <div 
-                    key={verse.id} 
-                    style={{ 
-                      backgroundColor: '#ffffff', 
-                      padding: '30px', 
-                      borderRadius: '12px', 
+                  <div
+                    key={verse.id}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      padding: '30px',
+                      borderRadius: '12px',
                       border: '1px solid #e2e8f0',
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '20px' 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '20px'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ backgroundColor: '#ccfbf1', color: '#0f766e', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
                         Ayat {verse.verse_key}
                       </span>
+                      {hafazanMode && (
+                        <span style={{ fontSize: '11px', color: '#b45309', fontWeight: 600 }}>
+                          {isRevealed ? 'Tekan untuk blur semula' : 'Tekan untuk semak'}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Memaparkan Imej Tajwid Asli dari Quran.com (Tidak akan pecah & warna tajwid 100% tepat) */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0' }}>
-                      <img 
-                        src={tajweedImageUrl} 
-                        alt={`Ayat ${verseNumber}`} 
-                        style={{ maxWidth: '100%', height: 'auto', minHeight: '50px', objectFit: 'contain' }} 
-                        onError={(e) => {
-                          // Jika imej gagal dimuatkan, ia akan paparkan teks biasa sebagai backup
-                          e.currentTarget.style.display = 'none';
-                          const fallbackText = document.getElementById(`fallback-${verse.id}`);
-                          if (fallbackText) fallbackText.style.display = 'block';
-                        }}
-                      />
-                      {/* Teks backup jika internet lambat loading imej */}
-                      <div 
-                        id={`fallback-${verse.id}`}
-                        dir="rtl"
-                        style={{ display: 'none', fontSize: '32px', fontFamily: 'serif', lineHeight: '2.5', textAlign: 'right', direction: 'rtl' }}
-                      >
-                        {verse.text_uthmani} ﴿{verseNumber}﴾
-                      </div>
-                    </div>
-
-                    {/* Terjemahan Melayu */}
-                    <div 
-                      style={{ 
-                        fontSize: '15px', 
-                        color: '#334155', 
-                        lineHeight: '1.6',
-                        borderTop: '1px dashed #e2e8f0',
-                        paddingTop: '15px',
-                        textAlign: 'left'
+                    {/* BAHARU: teks Arab tajweed terus dari API, blur dalam Mode Hafazan */}
+                    <div
+                      dir="rtl"
+                      onClick={() => hafazanMode && toggleReveal(verse.id)}
+                      style={{
+                        fontSize: '32px',
+                        fontFamily: 'serif',
+                        lineHeight: '2.5',
+                        textAlign: 'right',
+                        direction: 'rtl',
+                        filter: isBlurred ? 'blur(8px)' : 'none',
+                        cursor: hafazanMode ? 'pointer' : 'default',
+                        userSelect: isBlurred ? 'none' : 'auto',
+                        transition: 'filter 0.25s ease',
                       }}
-                      dangerouslySetInnerHTML={{ __html: translationText }}
+                      dangerouslySetInnerHTML={{ __html: `${verse.text_uthmani_tajweed} ﴿${verseNumber}﴾` }}
                     />
+
+                    {/* Terjemahan Melayu — disorok automatik dalam Mode Hafazan */}
+                    {showTranslation && !hafazanMode && (
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          color: '#334155',
+                          lineHeight: '1.6',
+                          borderTop: '1px dashed #e2e8f0',
+                          paddingTop: '15px',
+                          textAlign: 'left'
+                        }}
+                        dangerouslySetInnerHTML={{ __html: translationText }}
+                      />
+                    )}
                   </div>
                 );
               })}
