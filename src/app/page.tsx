@@ -717,6 +717,11 @@ export default function Home() {
         </div>
 
         <div className="mushaf-outer" style={{ maxWidth: '680px', margin: '0 auto', padding: '15px 15px 40px 15px' }}>
+          {user && !mushafHafazanMode && (
+            <p style={{ textAlign: 'center', color: theme.textMuted, fontSize: '11px', margin: '0 0 10px 0' }}>
+              👆 Tekan mana-mana baris untuk tanda/buang tanda hafaz
+            </p>
+          )}
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
@@ -801,44 +806,32 @@ export default function Home() {
                 const lineMastered = ayahsInLine.length > 0 && ayahsInLine.every((a) => allMasteredSet.has(`${a.surah}:${a.ayah}`));
                 const isSavingThisLine = savingLineKey === lineKey;
 
+                // BAHARU: bila BUKAN dalam Mode Hafazan & user log masuk, tekan baris
+                // untuk tanda/buang tanda master (bukan Mode Hafazan punya reveal/blur)
+                const handleLineClick = mushafHafazanMode
+                  ? () => toggleRevealedLine(lineKey)
+                  : user
+                    ? () => toggleLineMastered(line, lineKey)
+                    : undefined;
+
                 return (
-                  <div key={idx} style={{ position: 'relative' }}>
+                  <div
+                    key={idx}
+                    style={{
+                      backgroundColor: !mushafHafazanMode && lineMastered ? (darkMode ? 'rgba(34,197,94,0.18)' : '#dcfce7') : 'transparent',
+                      borderRadius: '8px',
+                      padding: !mushafHafazanMode && lineMastered ? '2px 0' : '0',
+                      opacity: isSavingThisLine ? 0.5 : 1,
+                      transition: 'background-color 0.2s ease',
+                    }}
+                  >
                     {juzBadge}
                     <MushafLine
                       words={lineWords}
                       centered={!!line.c}
                       blurred={mushafHafazanMode && !isRevealed}
-                      onClick={mushafHafazanMode ? () => toggleRevealedLine(lineKey) : undefined}
+                      onClick={handleLineClick}
                     />
-                    {/* BAHARU: butang kecil Tandakan Master — hanya bila log masuk */}
-                    {user && (
-                      <button
-                        onClick={() => toggleLineMastered(line, lineKey)}
-                        disabled={isSavingThisLine}
-                        title="Tandakan ayat dalam baris ni sebagai master"
-                        style={{
-                          position: 'absolute',
-                          left: '0px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          width: '22px',
-                          height: '22px',
-                          borderRadius: '50%',
-                          border: lineMastered ? '1px solid #16a34a' : `1px solid ${theme.border}`,
-                          backgroundColor: lineMastered ? '#16a34a' : theme.card,
-                          color: lineMastered ? '#ffffff' : theme.textMuted,
-                          fontSize: '11px',
-                          cursor: isSavingThisLine ? 'wait' : 'pointer',
-                          opacity: isSavingThisLine ? 0.5 : 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: 0,
-                        }}
-                      >
-                        {lineMastered ? '✓' : '☆'}
-                      </button>
-                    )}
                   </div>
                 );
               })}
