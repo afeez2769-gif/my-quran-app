@@ -132,6 +132,7 @@ function MushafLine({
       className="mushaf-line"
       style={{
         display: 'flex',
+        alignItems: 'baseline',
         justifyContent: useJustify ? 'space-between' : 'center',
         width: '100%',
         whiteSpace: 'nowrap',
@@ -146,7 +147,9 @@ function MushafLine({
             onClick={state.onClick}
             style={{
               display: 'inline-flex',
+              alignItems: 'baseline',
               gap: '0.22em',
+              padding: '0.08em 0.05em',
               filter: state.blurred ? 'blur(6px)' : 'none',
               backgroundColor: state.highlighted ? 'rgba(34,197,94,0.28)' : 'transparent',
               borderRadius: '6px',
