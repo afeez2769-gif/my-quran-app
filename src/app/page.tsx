@@ -132,7 +132,6 @@ function MushafLine({
       className="mushaf-line"
       style={{
         display: 'flex',
-        alignItems: 'baseline',
         justifyContent: useJustify ? 'space-between' : 'center',
         width: '100%',
         whiteSpace: 'nowrap',
@@ -147,12 +146,9 @@ function MushafLine({
             onClick={state.onClick}
             style={{
               display: 'inline-flex',
-              alignItems: 'baseline',
-              lineHeight: '1.3', // BAHARU: elak warisi line-height 2.3 dari .mushaf-line (punca highlight nampak "penuh baris")
               gap: '0.22em',
-              padding: '0.08em 0.05em',
               filter: state.blurred ? 'blur(6px)' : 'none',
-              backgroundColor: state.highlighted ? 'rgba(34,197,94,0.28)' : 'transparent',
+              backgroundColor: state.highlighted ? 'rgba(34,197,94,0.16)' : 'transparent', // BAHARU: opacity dikurangkan (0.28 -> 0.16) supaya nampak lebih nipis/lembut
               borderRadius: '6px',
               cursor: state.onClick ? 'pointer' : 'default',
               userSelect: state.blurred ? 'none' : 'auto',
