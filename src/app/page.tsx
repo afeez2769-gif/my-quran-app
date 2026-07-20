@@ -189,10 +189,10 @@ export default function Home() {
   // (bukan seluruh baris), supaya satu baris yang ada 2 ayat boleh
   // dibuka/blur berasingan
   const [mushafHafazanMode, setMushafHafazanMode] = useState<boolean>(false);
-  const [mushafRevealedAyahs, setMushafRevealedAyahs] = useState<Set<string>>(new Set());
+  const [revealedAyahs, setRevealedMushafAyahs] = useState<Set<string>>(new Set());
 
   const toggleRevealedAyah = (key: string) => {
-    setMushafRevealedAyahs((prev) => {
+    setRevealedMushafAyahs((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -202,7 +202,7 @@ export default function Home() {
 
   // reset ayat terdedah bila tukar muka surat, supaya semua blur semula
   useEffect(() => {
-    setMushafRevealedAyahs(new Set());
+    setRevealedMushafAyahs(new Set());
   }, [currentPage]);
 
   // BAHARU: progress "master" MERENTASI SEMUA SURAH (untuk Mode Mushaf, sebab
@@ -784,7 +784,7 @@ export default function Home() {
                   // jadi kekal sebagai SATU segmen sahaja (blur/reveal seperti baris biasa,
                   // tiada tanda master sebab tiada nombor ayat untuk dilekatkan)
                   const bismillahKey = `bismillah-${line.p}-${line.l}`;
-                  const isRevealed = mushafRevealedAyahs.has(bismillahKey);
+                  const isRevealed = revealedAyahs.has(bismillahKey);
                   return (
                     <div key={idx}>
                       {juzBadge}
@@ -825,7 +825,7 @@ export default function Home() {
                         const isSaving = savingAyahKey === key;
 
                         if (mushafHafazanMode) {
-                          const isRevealed = mushafRevealedAyahs.has(key);
+                          const isRevealed = revealedAyahs.has(key);
                           return {
                             blurred: !isRevealed,
                             onClick: () => toggleRevealedAyah(key),
