@@ -140,12 +140,22 @@ function MushafLine({
             style={
               wState
                 ? {
+                    // BAHARU: box-shadow (bukan background/padding biasa) — ia "melimpah"
+                    // ke ruang jarak sekeliling perkataan (rapatkan jurang antara
+                    // perkataan sebelah dalam ayat sama) TANPA ubah saiz sebenar
+                    // elemen (box-shadow tak pernah dikira dalam getBoundingClientRect,
+                    // jadi 100% selamat untuk algoritma fit()).
+                    boxShadow: wState.highlighted ? '0 0 0 5px rgba(34,197,94,0.28)' : 'none',
                     backgroundColor: wState.highlighted ? 'rgba(34,197,94,0.28)' : 'transparent',
+                    // BAHARU: line-height ketat TERUS pada elemen yang diukur oleh fit()
+                    // — selamat sebab line-height tak pernah pengaruhi LEBAR (cuma tinggi),
+                    // jadi tak jejaskan pengiraan getBoundingClientRect().width langsung
+                    lineHeight: wState.highlighted ? '1.35' : 'inherit',
                     filter: wState.blurred ? 'blur(6px)' : 'none',
                     cursor: wState.onClick ? 'pointer' : 'default',
                     userSelect: wState.blurred ? 'none' : 'auto',
-                    borderRadius: '4px',
-                    transition: 'filter 0.2s ease, background-color 0.2s ease',
+                    borderRadius: '3px',
+                    transition: 'filter 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
                   }
                 : undefined
             }
