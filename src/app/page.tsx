@@ -499,6 +499,32 @@ export default function Home() {
     setSavingPageProgress(false);
   };
 
+  // BAHARU: batalkan tanda untuk muka surat TERKINI sahaja (elak masalah tersalah tekan) —
+  // muka surat lama yang dah lepas tak boleh diubah (kekalkan sequential-integrity)
+  const unmarkLastPage = async () => {
+    if (!user || lastCompletedPage <= 0) return;
+    setSavingPageProgress(true);
+
+    const newValue = lastCompletedPage - 1;
+
+    const { error } = await supabase
+      .from('reading_progress')
+      .upsert(
+        {
+          user_id: user.id,
+          last_completed_page: newValue,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+
+    if (!error) {
+      setLastCompletedPage(newValue);
+    }
+
+    setSavingPageProgress(false);
+  };
+
   // juzuk untuk mana-mana nombor muka surat (guna untuk roadmap & footer)
   const juzForPage = (pageNumber: number): number => {
     let active = JUZ_STARTS[0];
@@ -635,6 +661,10 @@ export default function Home() {
             max-width: 480px;
             margin: 0 auto;
             padding: 10px 12px;
+            overflow-x: hidden;
+          }
+
+          .mushaf-outer {
             overflow-x: hidden;
           }
 
@@ -906,27 +936,37 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif', flexWrap: 'wrap', gap: '6px' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif', flexWrap: 'wrap', gap: '6px', maxWidth: '100%', overflow: 'hidden' }}>
+            <span style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', minWidth: 0 }}>
+              <span style={{ whiteSpace: 'nowrap' }}>
                 {currentPage} - <span style={{ fontSize: '13px' }}>{toArabicNumeral(currentPage)}</span>
               </span>
 
-              {/* BAHARU: tanda selesai baca — kecil, sebelah nombor muka surat */}
+              {/* BAHARU: tanda selesai baca — kecil, sebelah nombor muka surat.
+                  Muka surat TERKINI yang ditanda boleh tekan sekali lagi untuk batalkan
+                  (elak masalah tersalah tekan) — muka surat lama yang dah lepas tak boleh diubah. */}
               {user && (
-                currentPage <= lastCompletedPage ? (
-                  <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Selesai</span>
+                currentPage === lastCompletedPage && currentPage > 0 ? (
+                  <span
+                    onClick={() => !savingPageProgress && unmarkLastPage()}
+                    title="Tekan untuk batalkan tanda"
+                    style={{ color: '#16a34a', fontWeight: 600, cursor: savingPageProgress ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {savingPageProgress ? '...' : '✓ Selesai'}
+                  </span>
+                ) : currentPage < lastCompletedPage ? (
+                  <span style={{ color: '#16a34a', fontWeight: 600, whiteSpace: 'nowrap' }}>✓ Selesai</span>
                 ) : currentPage === lastCompletedPage + 1 ? (
                   <span
                     onClick={() => !savingPageProgress && markPageCompleted(currentPage)}
-                    style={{ color: theme.text, fontWeight: 600, textDecoration: 'underline', cursor: savingPageProgress ? 'wait' : 'pointer' }}
+                    style={{ color: theme.text, fontWeight: 600, textDecoration: 'underline', cursor: savingPageProgress ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
                   >
                     {savingPageProgress ? '...' : 'Selesai Baca?'}
                   </span>
                 ) : null
               )}
             </span>
-            <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+            <span style={{ fontSize: '11px', color: '#94a3b8', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>
               {currentSurahInfo?.name_complex || ''} • Juzuk {currentJuzNumber}
             </span>
           </div>
