@@ -216,13 +216,6 @@ export default function Home() {
     }
   }, [mushafMode, mushafLayout]);
 
-  // muat progress master (merentasi semua surah) bila Mode Mushaf dibuka & user log masuk
-  useEffect(() => {
-    if (mushafMode && user) {
-      fetchAllMastered(user.id);
-    }
-  }, [mushafMode, user]);
-
   // dapatkan senarai unik (surah, ayah) yang diliputi oleh satu baris (word range f..e)
   const getAyahsForLine = (line: any): { surah: number; ayah: number }[] => {
     if (!wordAyahMap || !line.f || !line.e) return [];
@@ -377,6 +370,13 @@ export default function Home() {
   // simpan nombor ayat yang dah ditanda "master" untuk surah semasa
   const [masteredAyahs, setMasteredAyahs] = useState<Set<number>>(new Set());
   const [savingAyah, setSavingAyah] = useState<number | null>(null); // elak double-click semasa simpan
+
+  // BAHARU: muat progress master (merentasi semua surah) bila Mode Mushaf dibuka & user log masuk
+  useEffect(() => {
+    if (mushafMode && user) {
+      fetchAllMastered(user.id);
+    }
+  }, [mushafMode, user]);
 
   useEffect(() => {
     // semak sesi log masuk semasa app pertama kali load
