@@ -955,7 +955,7 @@ export default function Home() {
         🕋 30 Juzuk
       </h1>
       <p style={{ textAlign: 'center', color: theme.textMuted, fontSize: '14px', marginTop: 0 }}>
-        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Al-Quran Digital 30 Juzuk — Tajwid Berwarna & Terjemahan Malaysia"}
+        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Hafazan Al-Quran 30 Juzuk — Tajwid Berwarna & Terjemahan Malaysia"}
       </p>
 
       {!selectedSurah && !mushafMode && (
