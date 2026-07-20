@@ -40,7 +40,17 @@ function getMushafBaseFontSize() {
   return window.innerWidth <= 480 ? MUSHAF_BASE_FONT_SIZE_MOBILE : MUSHAF_BASE_FONT_SIZE_DESKTOP;
 }
 
-function MushafLine({ words, centered }: { words: string[]; centered: boolean }) {
+function MushafLine({
+  words,
+  centered,
+  blurred,
+  onClick,
+}: {
+  words: string[];
+  centered: boolean;
+  blurred?: boolean;
+  onClick?: () => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [fontSize, setFontSize] = useState(MUSHAF_BASE_FONT_SIZE_DESKTOP);
@@ -106,12 +116,17 @@ function MushafLine({ words, centered }: { words: string[]; centered: boolean })
       ref={containerRef}
       dir="rtl"
       className="mushaf-line"
+      onClick={onClick}
       style={{
         display: 'flex',
         justifyContent: useJustify ? 'space-between' : 'center',
         width: '100%',
         whiteSpace: 'nowrap',
         fontSize: `${fontSize}px`,
+        filter: blurred ? 'blur(6px)' : 'none',
+        cursor: onClick ? 'pointer' : 'default',
+        userSelect: blurred ? 'none' : 'auto',
+        transition: 'filter 0.2s ease',
       }}
     >
       {words.map((word, i) => (
@@ -138,19 +153,60 @@ export default function Home() {
   const [pageInput, setPageInput] = useState<string>('1');
   const [mushafLayout, setMushafLayout] = useState<any[] | null>(null); // semua 9046 baris (dimuat sekali sahaja)
   const [mushafWords, setMushafWords] = useState<string[] | null>(null); // semua 83668 perkataan (dimuat sekali sahaja)
+  const [wordAyahMap, setWordAyahMap] = useState<number[] | null>(null); // word_id -> (surah*1000+ayah)
   const [loadingMushafData, setLoadingMushafData] = useState<boolean>(false);
 
-  // muat layout.json & words.json SEKALI sahaja apabila Mode Mushaf dibuka buat pertama kali
+  // BAHARU: Mode Hafazan dalam Mode Mushaf — blur ikut BARIS (bukan ayat),
+  // sepadan dengan cara sebenar penghafal guna mushaf cetak
+  const [mushafHafazanMode, setMushafHafazanMode] = useState<boolean>(false);
+  const [revealedLines, setRevealedLines] = useState<Set<string>>(new Set());
+
+  const toggleRevealedLine = (key: string) => {
+    setRevealedLines((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // reset baris terdedah bila tukar muka surat, supaya semua blur semula
+  useEffect(() => {
+    setRevealedLines(new Set());
+  }, [currentPage]);
+
+  // BAHARU: progress "master" MERENTASI SEMUA SURAH (untuk Mode Mushaf, sebab
+  // satu muka surat boleh ada lebih dari satu surah) — kunci format "surah:ayah"
+  const [allMasteredSet, setAllMasteredSet] = useState<Set<string>>(new Set());
+  const [savingLineKey, setSavingLineKey] = useState<string | null>(null);
+
+  const fetchAllMastered = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('hafazan_progress')
+      .select('surah_number, ayah_number')
+      .eq('user_id', userId)
+      .eq('status', 'master');
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+    setAllMasteredSet(new Set((data || []).map((r: any) => `${r.surah_number}:${r.ayah_number}`)));
+  };
+
+  // muat layout.json, words.json & word-ayah-map.json SEKALI sahaja apabila Mode Mushaf dibuka buat pertama kali
   useEffect(() => {
     if (mushafMode && !mushafLayout) {
       setLoadingMushafData(true);
       Promise.all([
         fetch('/quran-data/layout.json').then(res => res.json()),
         fetch('/quran-data/words.json').then(res => res.json()),
+        fetch('/quran-data/word-ayah-map.json').then(res => res.json()),
       ])
-        .then(([layoutData, wordsData]) => {
+        .then(([layoutData, wordsData, ayahMapData]) => {
           setMushafLayout(layoutData);
           setMushafWords(wordsData);
+          setWordAyahMap(ayahMapData);
           setLoadingMushafData(false);
         })
         .catch(err => {
@@ -159,6 +215,83 @@ export default function Home() {
         });
     }
   }, [mushafMode, mushafLayout]);
+
+  // muat progress master (merentasi semua surah) bila Mode Mushaf dibuka & user log masuk
+  useEffect(() => {
+    if (mushafMode && user) {
+      fetchAllMastered(user.id);
+    }
+  }, [mushafMode, user]);
+
+  // dapatkan senarai unik (surah, ayah) yang diliputi oleh satu baris (word range f..e)
+  const getAyahsForLine = (line: any): { surah: number; ayah: number }[] => {
+    if (!wordAyahMap || !line.f || !line.e) return [];
+    const seen = new Set<string>();
+    const result: { surah: number; ayah: number }[] = [];
+    for (let wid = line.f; wid <= line.e; wid++) {
+      const code = wordAyahMap[wid - 1];
+      if (!code) continue;
+      const surah = Math.floor(code / 1000);
+      const ayah = code % 1000;
+      const key = `${surah}:${ayah}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push({ surah, ayah });
+      }
+    }
+    return result;
+  };
+
+  // togol status master untuk SEMUA ayat yang diliputi satu baris
+  const toggleLineMastered = async (line: any, lineKey: string) => {
+    if (!user) return;
+    const ayahsInLine = getAyahsForLine(line);
+    if (ayahsInLine.length === 0) return;
+
+    setSavingLineKey(lineKey);
+
+    const allAlreadyMastered = ayahsInLine.every((a) => allMasteredSet.has(`${a.surah}:${a.ayah}`));
+
+    if (allAlreadyMastered) {
+      // buang semua rekod ayat dalam baris ni
+      for (const a of ayahsInLine) {
+        await supabase
+          .from('hafazan_progress')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('surah_number', a.surah)
+          .eq('ayah_number', a.ayah);
+      }
+      setAllMasteredSet((prev) => {
+        const next = new Set(prev);
+        ayahsInLine.forEach((a) => next.delete(`${a.surah}:${a.ayah}`));
+        return next;
+      });
+    } else {
+      // tandakan semua ayat dalam baris ni sebagai master
+      for (const a of ayahsInLine) {
+        await supabase
+          .from('hafazan_progress')
+          .upsert(
+            {
+              user_id: user.id,
+              surah_number: a.surah,
+              ayah_number: a.ayah,
+              status: 'master',
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,surah_number,ayah_number' }
+          );
+      }
+      setAllMasteredSet((prev) => {
+        const next = new Set(prev);
+        ayahsInLine.forEach((a) => next.add(`${a.surah}:${a.ayah}`));
+        return next;
+      });
+    }
+
+    setSavingLineKey(null);
+  };
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -498,6 +631,23 @@ export default function Home() {
               {darkMode ? '☀️' : '🌙'}
             </button>
 
+            {/* BAHARU: togol Mode Hafazan — blur ikut baris */}
+            <button
+              onClick={() => setMushafHafazanMode((v) => !v)}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '20px',
+                border: mushafHafazanMode ? '1px solid #b45309' : `1px solid ${theme.border}`,
+                backgroundColor: mushafHafazanMode ? '#b45309' : theme.card,
+                color: mushafHafazanMode ? '#ffffff' : theme.text,
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {mushafHafazanMode ? '✓ Mode Hafazan' : '🙈 Mode Hafazan'}
+            </button>
+
             <select
               value=""
               onChange={(e) => {
@@ -622,11 +772,18 @@ export default function Home() {
                 }
 
                 if (line.t === 'basmallah') {
+                  const lineKey = `${line.p}-${line.l}`;
+                  const isRevealed = revealedLines.has(lineKey);
                   return (
                     <div key={idx}>
                       {juzBadge}
                       <div style={{ margin: '10px 0' }}>
-                        <MushafLine words={BISMILLAH_WORDS} centered={true} />
+                        <MushafLine
+                          words={BISMILLAH_WORDS}
+                          centered={true}
+                          blurred={mushafHafazanMode && !isRevealed}
+                          onClick={mushafHafazanMode ? () => toggleRevealedLine(lineKey) : undefined}
+                        />
                       </div>
                     </div>
                   );
@@ -636,10 +793,52 @@ export default function Home() {
                   ? mushafWords.slice(line.f - 1, line.e)
                   : [];
 
+                const lineKey = `${line.p}-${line.l}`;
+                const isRevealed = revealedLines.has(lineKey);
+
+                // BAHARU: semak jika SEMUA ayat dalam baris ni dah master
+                const ayahsInLine = user ? getAyahsForLine(line) : [];
+                const lineMastered = ayahsInLine.length > 0 && ayahsInLine.every((a) => allMasteredSet.has(`${a.surah}:${a.ayah}`));
+                const isSavingThisLine = savingLineKey === lineKey;
+
                 return (
-                  <div key={idx}>
+                  <div key={idx} style={{ position: 'relative' }}>
                     {juzBadge}
-                    <MushafLine words={lineWords} centered={!!line.c} />
+                    <MushafLine
+                      words={lineWords}
+                      centered={!!line.c}
+                      blurred={mushafHafazanMode && !isRevealed}
+                      onClick={mushafHafazanMode ? () => toggleRevealedLine(lineKey) : undefined}
+                    />
+                    {/* BAHARU: butang kecil Tandakan Master — hanya bila log masuk */}
+                    {user && (
+                      <button
+                        onClick={() => toggleLineMastered(line, lineKey)}
+                        disabled={isSavingThisLine}
+                        title="Tandakan ayat dalam baris ni sebagai master"
+                        style={{
+                          position: 'absolute',
+                          left: '0px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          border: lineMastered ? '1px solid #16a34a' : `1px solid ${theme.border}`,
+                          backgroundColor: lineMastered ? '#16a34a' : theme.card,
+                          color: lineMastered ? '#ffffff' : theme.textMuted,
+                          fontSize: '11px',
+                          cursor: isSavingThisLine ? 'wait' : 'pointer',
+                          opacity: isSavingThisLine ? 0.5 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                        }}
+                      >
+                        {lineMastered ? '✓' : '☆'}
+                      </button>
+                    )}
                   </div>
                 );
               })}
