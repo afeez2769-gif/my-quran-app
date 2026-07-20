@@ -144,7 +144,7 @@ function MushafLine({
                     // dan walaupun ada jurang kecil antara perkataan, mata tetap baca
                     // sebagai satu garis berterusan. border-bottom cuma tambah TINGGI,
                     // langsung tak sentuh lebar — 100% selamat untuk algoritma fit().
-                    borderBottom: wState.highlighted ? '2px solid rgba(22,163,74,0.45)' : '2px solid transparent',
+                    borderBottom: wState.highlighted ? '2px solid rgba(22,163,74,0.3)' : '2px solid transparent',
                     filter: wState.blurred ? 'blur(6px)' : 'none',
                     cursor: wState.onClick ? 'pointer' : 'default',
                     userSelect: wState.blurred ? 'none' : 'auto',
@@ -796,6 +796,7 @@ export default function Home() {
                           const isRevealed = mushafRevealedAyahs.has(key);
                           return {
                             blurred: !isRevealed,
+                            highlighted: allMasteredSet.has(key), // BAHARU: garis kekal nampak walaupun sedang blur
                             onClick: () => toggleRevealedAyah(key),
                           };
                         }
