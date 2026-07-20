@@ -906,45 +906,31 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-              {currentPage} - <span style={{ fontSize: '13px' }}>{toArabicNumeral(currentPage)}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif', flexWrap: 'wrap', gap: '6px' }}>
+            <span style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>
+                {currentPage} - <span style={{ fontSize: '13px' }}>{toArabicNumeral(currentPage)}</span>
+              </span>
+
+              {/* BAHARU: tanda selesai baca — kecil, sebelah nombor muka surat */}
+              {user && (
+                currentPage <= lastCompletedPage ? (
+                  <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Selesai Baca</span>
+                ) : currentPage === lastCompletedPage + 1 ? (
+                  <span
+                    onClick={() => !savingPageProgress && markPageCompleted(currentPage)}
+                    style={{ color: theme.accent, fontWeight: 600, textDecoration: 'underline', cursor: savingPageProgress ? 'wait' : 'pointer' }}
+                  >
+                    {savingPageProgress ? 'Menyimpan...' : 'klik jika sudah selesai baca'}
+                  </span>
+                ) : null
+              )}
             </span>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
               {currentSurahInfo?.name_complex || ''} • Juzuk {currentJuzNumber}
             </span>
           </div>
 
-          {/* BAHARU: tanda muka surat semasa selesai — sequential, tak boleh langkau */}
-          {user && (
-            <div style={{ textAlign: 'center', padding: '4px 4px 16px 4px' }}>
-              {currentPage <= lastCompletedPage ? (
-                <span style={{
-                  display: 'inline-block', padding: '6px 16px', borderRadius: '20px',
-                  border: '1px solid #16a34a', backgroundColor: '#16a34a', color: '#ffffff',
-                  fontSize: '12px', fontWeight: 600,
-                }}>
-                  ✓ Muka Surat Ini Sudah Selesai
-                </span>
-              ) : currentPage === lastCompletedPage + 1 ? (
-                <button
-                  onClick={() => markPageCompleted(currentPage)}
-                  disabled={savingPageProgress}
-                  style={{
-                    padding: '8px 18px', borderRadius: '20px', border: 'none',
-                    backgroundColor: '#16a34a', color: '#ffffff', fontSize: '13px', fontWeight: 600,
-                    cursor: savingPageProgress ? 'wait' : 'pointer', opacity: savingPageProgress ? 0.6 : 1,
-                  }}
-                >
-                  {savingPageProgress ? 'Menyimpan...' : '✓ Tandakan Muka Surat Ini Selesai'}
-                </button>
-              ) : (
-                <span style={{ fontSize: '11px', color: theme.textMuted }}>
-                  🔒 Selesaikan Muka Surat {lastCompletedPage + 1} dahulu untuk teruskan progress
-                </span>
-              )}
-            </div>
-          )}
         </div>
       </div>
     );
