@@ -17,11 +17,6 @@ const BISMILLAH_HTML = BISMILLAH_WORDS.join(' ');
 // BAHARU: titik permulaan setiap 30 juz (muka surat + baris tepat) — dari data QUL
 const JUZ_STARTS: { j: number; p: number; l: number }[] = [{"j":1,"p":1,"l":2},{"j":2,"p":22,"l":1},{"j":3,"p":42,"l":1},{"j":4,"p":62,"l":2},{"j":5,"p":82,"l":1},{"j":6,"p":102,"l":1},{"j":7,"p":121,"l":9},{"j":8,"p":142,"l":1},{"j":9,"p":162,"l":1},{"j":10,"p":182,"l":1},{"j":11,"p":201,"l":13},{"j":12,"p":222,"l":1},{"j":13,"p":242,"l":1},{"j":14,"p":262,"l":3},{"j":15,"p":282,"l":3},{"j":16,"p":302,"l":1},{"j":17,"p":322,"l":3},{"j":18,"p":342,"l":3},{"j":19,"p":362,"l":1},{"j":20,"p":382,"l":1},{"j":21,"p":402,"l":1},{"j":22,"p":422,"l":1},{"j":23,"p":442,"l":1},{"j":24,"p":462,"l":1},{"j":25,"p":482,"l":1},{"j":26,"p":502,"l":9},{"j":27,"p":522,"l":1},{"j":28,"p":542,"l":3},{"j":29,"p":562,"l":3},{"j":30,"p":582,"l":3}];
 
-// BAHARU: kawalan PER PERKATAAN + justify — teknik yang sama macam percetakan
-// mushaf sebenar. Saiz font KEKAL TETAP (26px); jarak ANTARA perkataan yang
-// diregangkan (justify) untuk penuhi lebar baris. Font cuma dikecilkan sebagai
-// LANGKAH TERAKHIR — hanya jika jumlah lebar perkataan sendiri (tanpa jarak
-// pun) dah melebihi ruang yang ada.
 const MUSHAF_BASE_FONT_SIZE_DESKTOP = 26;
 const MUSHAF_BASE_FONT_SIZE_MOBILE = 19;
 const MUSHAF_MIN_FONT_SIZE = 12;
@@ -40,26 +35,34 @@ function getMushafBaseFontSize() {
   return window.innerWidth <= 480 ? MUSHAF_BASE_FONT_SIZE_MOBILE : MUSHAF_BASE_FONT_SIZE_DESKTOP;
 }
 
+// BAHARU: MushafLine kekal STRUKTUR ASAL yang stabil (satu senarai rata
+// <span> setiap perkataan, terus jadi anak flex — TIADA pembungkus
+// tambahan/segmen bersarang). Highlight & klik-per-ayat kini diletak
+// TERUS pada setiap <span> perkataan itu sendiri (guna getWordState),
+// supaya struktur yang diukur oleh algoritma fit() kekal 100% sama
+// dengan versi yang telah disahkan stabil.
 function MushafLine({
   words,
+  ayahCodes,
   centered,
   blurred,
   onClick,
+  getWordState,
 }: {
   words: string[];
+  ayahCodes?: number[]; // pilihan — kalau tiada, tiada highlight per-ayat (contoh Bismillah)
   centered: boolean;
-  blurred?: boolean;
-  onClick?: () => void;
+  blurred?: boolean; // blur SELURUH baris (dipakai bila getWordState tiada, cth Bismillah)
+  onClick?: () => void; // klik SELURUH baris (dipakai bila getWordState tiada, cth Bismillah)
+  getWordState?: (ayahCode: number) => { blurred?: boolean; highlighted?: boolean; onClick?: () => void };
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const [fontSize, setFontSize] = useState(MUSHAF_BASE_FONT_SIZE_DESKTOP);
   const [useJustify, setUseJustify] = useState(false);
 
-  // baris "centered" (ikut data QUL) atau baris satu-perkataan sahaja —
-  // tak sesekali di-justify, cukup letak di tengah macam mushaf sebenar
   const canJustify = !centered && words.length > 1;
-  const wordsKey = words.join('|'); // rentetan stabil untuk dependency effect
+  const wordsKey = words.join('|');
 
   useEffect(() => {
     let cancelled = false;
@@ -69,13 +72,11 @@ function MushafLine({
       const container = containerRef.current;
       if (!container) return;
 
-      const baseSize = getMushafBaseFontSize(); // BAHARU: 26px desktop, 19px mobile
+      const baseSize = getMushafBaseFontSize();
 
-      // ukur pada saiz ASAS dahulu
       container.style.fontSize = `${baseSize}px`;
       const availableWidth = container.clientWidth;
 
-      // jumlahkan lebar SEMULA JADI setiap perkataan (tanpa jarak/gap)
       let totalWordsWidth = 0;
       wordRefs.current.forEach((el) => {
         if (el) totalWordsWidth += el.getBoundingClientRect().width;
@@ -84,14 +85,12 @@ function MushafLine({
       if (totalWordsWidth === 0) return;
 
       if (totalWordsWidth <= availableWidth) {
-        // perkataan sendiri dah muat selesa — kekal saiz asas, regangkan jarak (justify)
         setFontSize(baseSize);
         setUseJustify(canJustify);
       } else {
-        // langsung tak muat walaupun perkataan rapat — baru kecilkan font
         const ratio = availableWidth / totalWordsWidth;
         setFontSize(Math.max(MUSHAF_MIN_FONT_SIZE, baseSize * ratio));
-        setUseJustify(false); // lepas dikecilkan, tiada baki ruang nak justify
+        setUseJustify(false);
       }
     }
 
@@ -116,26 +115,43 @@ function MushafLine({
       ref={containerRef}
       dir="rtl"
       className="mushaf-line"
-      onClick={onClick}
+      onClick={!getWordState ? onClick : undefined}
       style={{
         display: 'flex',
         justifyContent: useJustify ? 'space-between' : 'center',
         width: '100%',
         whiteSpace: 'nowrap',
         fontSize: `${fontSize}px`,
-        filter: blurred ? 'blur(6px)' : 'none',
-        cursor: onClick ? 'pointer' : 'default',
-        userSelect: blurred ? 'none' : 'auto',
+        filter: !getWordState && blurred ? 'blur(6px)' : 'none',
+        cursor: !getWordState && onClick ? 'pointer' : 'default',
+        userSelect: !getWordState && blurred ? 'none' : 'auto',
         transition: 'filter 0.2s ease',
       }}
     >
-      {words.map((word, i) => (
-        <span
-          key={i}
-          ref={(el) => { wordRefs.current[i] = el; }}
-          dangerouslySetInnerHTML={{ __html: word }}
-        />
-      ))}
+      {words.map((word, i) => {
+        const code = ayahCodes ? ayahCodes[i] || 0 : 0;
+        const wState = getWordState && code ? getWordState(code) : undefined;
+        return (
+          <span
+            key={i}
+            ref={(el) => { wordRefs.current[i] = el; }}
+            onClick={wState?.onClick}
+            dangerouslySetInnerHTML={{ __html: word }}
+            style={
+              wState
+                ? {
+                    backgroundColor: wState.highlighted ? 'rgba(34,197,94,0.28)' : 'transparent',
+                    filter: wState.blurred ? 'blur(6px)' : 'none',
+                    cursor: wState.onClick ? 'pointer' : 'default',
+                    userSelect: wState.blurred ? 'none' : 'auto',
+                    borderRadius: '4px',
+                    transition: 'filter 0.2s ease, background-color 0.2s ease',
+                  }
+                : undefined
+            }
+          />
+        );
+      })}
     </div>
   );
 }
@@ -151,14 +167,25 @@ export default function Home() {
   const [mushafMode, setMushafMode] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageInput, setPageInput] = useState<string>('1');
-  const [mushafLayout, setMushafLayout] = useState<any[] | null>(null); // semua 9046 baris (dimuat sekali sahaja)
-  const [mushafWords, setMushafWords] = useState<string[] | null>(null); // semua 83668 perkataan (dimuat sekali sahaja)
+  const [mushafLayout, setMushafLayout] = useState<any[] | null>(null);
+  const [mushafWords, setMushafWords] = useState<string[] | null>(null);
+  const [wordAyahMap, setWordAyahMap] = useState<number[] | null>(null);
   const [loadingMushafData, setLoadingMushafData] = useState<boolean>(false);
 
-  // BAHARU: Mode Hafazan dalam Mode Mushaf — blur ikut BARIS (bukan ayat),
-  // sepadan dengan cara sebenar penghafal guna mushaf cetak
+  // BAHARU: Mode Hafazan dalam Mode Mushaf — blur ikut AYAT (guna kunci "surah:ayah")
   const [mushafHafazanMode, setMushafHafazanMode] = useState<boolean>(false);
+  const [mushafRevealedAyahs, setMushafRevealedAyahs] = useState<Set<string>>(new Set());
+  // Bismillah pembuka (bukan ayat bernombor) — blur berasingan guna kunci baris biasa
   const [revealedLines, setRevealedLines] = useState<Set<string>>(new Set());
+
+  const toggleRevealedAyah = (key: string) => {
+    setMushafRevealedAyahs((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const toggleRevealedLine = (key: string) => {
     setRevealedLines((prev) => {
@@ -169,22 +196,25 @@ export default function Home() {
     });
   };
 
-  // reset baris terdedah bila tukar muka surat, supaya semua blur semula
+  // reset status terdedah bila tukar muka surat, supaya semua blur semula
   useEffect(() => {
+    setMushafRevealedAyahs(new Set());
     setRevealedLines(new Set());
   }, [currentPage]);
 
-  // muat layout.json & words.json SEKALI sahaja apabila Mode Mushaf dibuka buat pertama kali
+  // muat layout.json, words.json & word-ayah-map.json SEKALI sahaja apabila Mode Mushaf dibuka buat pertama kali
   useEffect(() => {
     if (mushafMode && !mushafLayout) {
       setLoadingMushafData(true);
       Promise.all([
         fetch('/quran-data/layout.json').then(res => res.json()),
         fetch('/quran-data/words.json').then(res => res.json()),
+        fetch('/quran-data/word-ayah-map.json').then(res => res.json()),
       ])
-        .then(([layoutData, wordsData]) => {
+        .then(([layoutData, wordsData, ayahMapData]) => {
           setMushafLayout(layoutData);
           setMushafWords(wordsData);
+          setWordAyahMap(ayahMapData);
           setLoadingMushafData(false);
         })
         .catch(err => {
@@ -262,7 +292,6 @@ export default function Home() {
     }
   }, [darkMode]);
 
-  // set warna berdasarkan mod — satu tempat rujukan untuk seluruh app
   const theme = {
     bg: darkMode ? '#0f172a' : '#f8fafc',
     card: darkMode ? '#1e293b' : '#ffffff',
@@ -275,17 +304,14 @@ export default function Home() {
 
   // --- BAHARU: status log masuk & progress hafazan -----------------------
   const [user, setUser] = useState<any>(null);
-  // simpan nombor ayat yang dah ditanda "master" untuk surah semasa
   const [masteredAyahs, setMasteredAyahs] = useState<Set<number>>(new Set());
-  const [savingAyah, setSavingAyah] = useState<number | null>(null); // elak double-click semasa simpan
+  const [savingAyah, setSavingAyah] = useState<number | null>(null);
 
   useEffect(() => {
-    // semak sesi log masuk semasa app pertama kali load
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
     });
 
-    // dengar perubahan status log masuk (login/logout) di mana-mana bahagian app
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -297,7 +323,6 @@ export default function Home() {
     await supabase.auth.signOut();
   };
 
-  // ambil senarai ayat yang dah "master" untuk surah + user semasa
   const fetchMasteredAyahs = async (surahId: number, userId: string) => {
     const { data, error } = await supabase
       .from('hafazan_progress')
@@ -313,7 +338,6 @@ export default function Home() {
     setMasteredAyahs(new Set((data || []).map((row: any) => row.ayah_number)));
   };
 
-  // togol status master untuk satu ayat (tekan untuk tanda, tekan lagi untuk buang tanda)
   const toggleMastered = async (surahId: number, ayahNumber: number) => {
     if (!user) return;
     setSavingAyah(ayahNumber);
@@ -321,7 +345,6 @@ export default function Home() {
     const alreadyMastered = masteredAyahs.has(ayahNumber);
 
     if (alreadyMastered) {
-      // buang rekod (kembali ke "sedang belajar")
       const { error } = await supabase
         .from('hafazan_progress')
         .delete()
@@ -337,7 +360,6 @@ export default function Home() {
         });
       }
     } else {
-      // upsert: tambah baharu ATAU kemaskini kalau dah ada rekod (contoh status lama 'sedang_belajar')
       const { error } = await supabase
         .from('hafazan_progress')
         .upsert(
@@ -358,12 +380,76 @@ export default function Home() {
 
     setSavingAyah(null);
   };
+
+  // BAHARU: progress "master" MERENTASI SEMUA SURAH (untuk Mode Mushaf)
+  const [allMasteredSet, setAllMasteredSet] = useState<Set<string>>(new Set());
+  const [savingAyahKey, setSavingAyahKey] = useState<string | null>(null);
+
+  const fetchAllMastered = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('hafazan_progress')
+      .select('surah_number, ayah_number')
+      .eq('user_id', userId)
+      .eq('status', 'master');
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+    setAllMasteredSet(new Set((data || []).map((r: any) => `${r.surah_number}:${r.ayah_number}`)));
+  };
+
+  useEffect(() => {
+    if (mushafMode && user) {
+      fetchAllMastered(user.id);
+    }
+  }, [mushafMode, user]);
+
+  const toggleAyahMastered = async (surah: number, ayah: number, key: string) => {
+    if (!user) return;
+    setSavingAyahKey(key);
+
+    const already = allMasteredSet.has(key);
+
+    if (already) {
+      await supabase
+        .from('hafazan_progress')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('surah_number', surah)
+        .eq('ayah_number', ayah);
+      setAllMasteredSet((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    } else {
+      await supabase
+        .from('hafazan_progress')
+        .upsert(
+          {
+            user_id: user.id,
+            surah_number: surah,
+            ayah_number: ayah,
+            status: 'master',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,surah_number,ayah_number' }
+        );
+      setAllMasteredSet((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+    }
+
+    setSavingAyahKey(null);
+  };
   // -------------------------------------------------------------------------
 
   // --- BAHARU: kawalan Papar Terjemahan & Mode Hafazan -------------------
   const [showTranslation, setShowTranslation] = useState<boolean>(true);
   const [hafazanMode, setHafazanMode] = useState<boolean>(false);
-  // simpan id ayat yang sudah "dibuka" (tekan untuk jelaskan) dalam Mode Hafazan
   const [revealedAyahs, setRevealedAyahs] = useState<Set<number>>(new Set());
 
   const toggleReveal = (verseId: number) => {
@@ -387,7 +473,7 @@ export default function Home() {
     (versePage - 1) * VERSES_PER_PAGE,
     versePage * VERSES_PER_PAGE
   );
-  const versePageStartIndex = (versePage - 1) * VERSES_PER_PAGE; // untuk padankan index terjemahan sebenar
+  const versePageStartIndex = (versePage - 1) * VERSES_PER_PAGE;
   // -------------------------------------------------------------------------
 
   // 1. Ambil senarai surah
@@ -403,21 +489,18 @@ export default function Home() {
     setSelectedSurah(surah);
     setVerses([]);
     setTranslations([]);
-    setRevealedAyahs(new Set()); // reset status hafazan bila tukar surah
+    setRevealedAyahs(new Set());
     setMasteredAyahs(new Set());
-    setVersePage(1); // BAHARU: reset ke muka 1 bila buka surah baharu
+    setVersePage(1);
     setLoadingVerses(true);
 
     if (user) {
       fetchMasteredAyahs(surah.id, user.id);
     }
 
-    // BAHARU: guna endpoint uthmani_tajweed — pulangkan HTML tajweed terus
-    // (bukan uthmani biasa), jadi tak perlu imej / parser tambahan
     const fetchArabic = fetch(`https://api.quran.com/api/v4/quran/verses/uthmani_tajweed?chapter_number=${surah.id}`)
       .then(res => res.json());
 
-    // Ambil Terjemahan Bahasa Melayu
     const fetchTranslation = fetch(`https://api.quran.com/api/v4/quran/translations/39?chapter_number=${surah.id}`)
       .then(res => res.json());
 
@@ -433,8 +516,6 @@ export default function Home() {
       });
   };
 
-  // BAHARU: Mode Mushaf dipaparkan FULL-SCREEN (overlay menutup seluruh skrin),
-  // berasingan sepenuhnya dari layout app biasa (tiada header/logo/padding app)
   if (mushafMode) {
     return (
       <div className={darkMode ? 'dark-theme' : ''} style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: theme.bg, overflowY: 'auto', fontFamily: '"Inter", sans-serif', ['--mushaf-text-color' as any]: theme.text }}>
@@ -468,9 +549,6 @@ export default function Home() {
           tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
           tajweed[class="ghunnah"] { color: #FF7E1E; }
 
-          /* BAHARU: warna biru lebih cerah khas Mod Malam — warna asal
-             (madda_necessary #000EBC, madda_obligatory #2144C1) terlalu
-             gelap, hampir hilang atas latar navy gelap */
           .dark-theme tajweed[class="madda_necessary"] { color: #5C7CFA; }
           .dark-theme tajweed[class="madda_obligatory"],
           .dark-theme tajweed[class="madda_obligatory_mottasel"],
@@ -480,14 +558,14 @@ export default function Home() {
             font-family: 'UthmanicHafs', serif;
             line-height: 2.3;
             color: var(--mushaf-text-color, #111827);
-            transition: font-size 0.1s ease-out; /* elak "lompat" kasar bila saiz dikira semula */
+            transition: font-size 0.1s ease-out;
           }
 
           .mushaf-box {
-            max-width: 480px; /* BAHARU: kuruskan HANYA bahagian ayat, bukan keseluruhan halaman */
+            max-width: 480px;
             margin: 0 auto;
             padding: 10px 12px;
-            overflow-x: hidden; /* jaringan keselamatan semasa saat pengiraan saiz belum siap */
+            overflow-x: hidden;
           }
 
           @media (max-width: 480px) {
@@ -496,7 +574,6 @@ export default function Home() {
           }
         `}</style>
 
-        {/* Bar atas melekat (sticky) — kekal kelihatan semasa scroll */}
         <div style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: theme.card, borderBottom: `1px solid ${theme.border}`, padding: '10px 15px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: '10px', maxWidth: '680px', margin: '0 auto' }}>
             <button
@@ -515,7 +592,6 @@ export default function Home() {
               ⬅️ Keluar
             </button>
 
-            {/* BAHARU: togol Mod Malam */}
             <button
               onClick={() => setDarkMode((v) => !v)}
               style={{
@@ -532,7 +608,6 @@ export default function Home() {
               {darkMode ? '☀️' : '🌙'}
             </button>
 
-            {/* BAHARU: togol Mode Hafazan — blur ikut baris */}
             <button
               onClick={() => setMushafHafazanMode((v) => !v)}
               style={{
@@ -618,6 +693,11 @@ export default function Home() {
         </div>
 
         <div className="mushaf-outer" style={{ maxWidth: '680px', margin: '0 auto', padding: '15px 15px 40px 15px' }}>
+          {user && !mushafHafazanMode && (
+            <p style={{ textAlign: 'center', color: theme.textMuted, fontSize: '11px', margin: '0 0 10px 0' }}>
+              👆 Tekan mana-mana ayat untuk tanda/buang tanda hafaz
+            </p>
+          )}
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
@@ -693,18 +773,36 @@ export default function Home() {
                 const lineWords = mushafWords && line.f && line.e
                   ? mushafWords.slice(line.f - 1, line.e)
                   : [];
-
-                const lineKey = `${line.p}-${line.l}`;
-                const isRevealed = revealedLines.has(lineKey);
+                const lineAyahCodes = wordAyahMap && line.f && line.e
+                  ? Array.from({ length: line.e - line.f + 1 }, (_, i) => wordAyahMap[line.f - 1 + i] || 0)
+                  : lineWords.map(() => 0);
 
                 return (
                   <div key={idx}>
                     {juzBadge}
                     <MushafLine
                       words={lineWords}
+                      ayahCodes={lineAyahCodes}
                       centered={!!line.c}
-                      blurred={mushafHafazanMode && !isRevealed}
-                      onClick={mushafHafazanMode ? () => toggleRevealedLine(lineKey) : undefined}
+                      getWordState={(code) => {
+                        const surah = Math.floor(code / 1000);
+                        const ayah = code % 1000;
+                        const key = `${surah}:${ayah}`;
+
+                        if (mushafHafazanMode) {
+                          const isRevealed = mushafRevealedAyahs.has(key);
+                          return {
+                            blurred: !isRevealed,
+                            onClick: () => toggleRevealedAyah(key),
+                          };
+                        }
+
+                        const isSaving = savingAyahKey === key;
+                        return {
+                          highlighted: allMasteredSet.has(key),
+                          onClick: user && !isSaving ? () => toggleAyahMastered(surah, ayah, key) : undefined,
+                        };
+                      }}
                     />
                   </div>
                 );
@@ -712,7 +810,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* BAHARU: butang navigasi kecil di bawah juga */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', margin: '14px 0 4px 0' }}>
             <button
               onClick={() => goToPage(currentPage - 1)}
@@ -738,7 +835,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* BAHARU: footer kecil — surah, muka surat, juzuk semasa */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px', fontFamily: '"Inter", sans-serif' }}>
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
               {currentPage} - <span style={{ fontSize: '13px' }}>{toArabicNumeral(currentPage)}</span>
@@ -757,8 +853,6 @@ export default function Home() {
 
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
 
-      {/* BAHARU: warna rasmi tajweed — diletak sebagai global style supaya
-          terpakai pada HTML dari dangerouslySetInnerHTML (<tajweed class=...>) */}
       <style jsx global>{`
         @font-face {
           font-family: 'UthmanicHafs';
@@ -788,7 +882,6 @@ export default function Home() {
         tajweed[class="idgham_mutaqaribayn"] { color: #A1A1A1; }
         tajweed[class="ghunnah"] { color: #FF7E1E; }
 
-        /* BAHARU: warna biru lebih cerah khas Mod Malam */
         .dark-theme tajweed[class="madda_necessary"] { color: #5C7CFA; }
         .dark-theme tajweed[class="madda_obligatory"],
         .dark-theme tajweed[class="madda_obligatory_mottasel"],
@@ -797,7 +890,6 @@ export default function Home() {
 
 
 
-      {/* BAHARU: status log masuk + togol Mod Malam di penjuru kanan atas */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
         <button
           onClick={() => setDarkMode((v) => !v)}
@@ -870,7 +962,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* BAHARU: butang akses Mode Mushaf — hanya nampak di halaman senarai surah */}
       {!selectedSurah && (
         <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
           <button
@@ -895,7 +986,6 @@ export default function Home() {
 
       {selectedSurah ? (
         <div>
-          {/* Header Info Surah */}
           <div style={{ backgroundColor: theme.card, padding: '25px', borderRadius: '12px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
             <h2 style={{ color: '#0f766e', margin: '0 0 8px 0', fontSize: '24px' }}>{selectedSurah.name_complex}</h2>
             <div style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
@@ -904,7 +994,6 @@ export default function Home() {
               <span>{selectedSurah.verses_count} Ayat</span>
             </div>
 
-            {/* BAHARU: togol Papar Terjemahan & Mode Hafazan */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setShowTranslation((v) => !v)}
@@ -927,7 +1016,7 @@ export default function Home() {
               <button
                 onClick={() => {
                   setHafazanMode((v) => !v);
-                  setRevealedAyahs(new Set()); // mula semula blur bila togol mode
+                  setRevealedAyahs(new Set());
                 }}
                 style={{
                   padding: '8px 16px',
@@ -950,7 +1039,6 @@ export default function Home() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
-              {/* BAHARU: pagination ayat — hanya nampak kalau surah > 30 ayat */}
               {totalVersePages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
                   <button
@@ -984,11 +1072,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* BAHARU: Bismillah dipaparkan guna teks tajweed sendiri (bukan imej luar
-                  yang boleh rosak/404) — hanya di muka pertama sahaja bila surah panjang.
-                  Al-Fatihah (surah 1) & At-Tawbah (surah 9) dikecualikan — Al-Fatihah sebab
-                  Bismillah ITU SENDIRI ialah ayat 1 (jadi dah terpapar via senarai ayat),
-                  At-Tawbah sebab memang tiada Bismillah pembuka. */}
               {selectedSurah.id !== 9 && selectedSurah.id !== 1 && versePage === 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 20px 0' }}>
                   <div
@@ -1004,7 +1087,7 @@ export default function Home() {
               )}
 
               {pagedVerses.map((verse: any, localIndex: number) => {
-                const index = versePageStartIndex + localIndex; // index sebenar dalam senarai penuh (untuk terjemahan)
+                const index = versePageStartIndex + localIndex;
                 const translationText = translations[index]?.text || "Terjemahan tidak ditemui.";
                 const verseNumber = verse.verse_key.split(':')[1];
                 const isRevealed = revealedAyahs.has(verse.id);
@@ -1038,7 +1121,6 @@ export default function Home() {
                           </span>
                         )}
 
-                        {/* BAHARU: butang Tandakan Master — hanya nampak bila user log masuk */}
                         {user && (
                           <button
                             onClick={() => toggleMastered(selectedSurah.id, Number(verseNumber))}
@@ -1061,7 +1143,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* BAHARU: teks Arab tajweed terus dari API, blur dalam Mode Hafazan */}
                     <div
                       dir="rtl"
                       onClick={() => hafazanMode && toggleReveal(verse.id)}
@@ -1080,7 +1161,6 @@ export default function Home() {
                       dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed }}
                     />
 
-                    {/* Terjemahan Melayu — disorok automatik dalam Mode Hafazan */}
                     {showTranslation && !hafazanMode && (
                       <div
                         style={{
@@ -1098,7 +1178,6 @@ export default function Home() {
                 );
               })}
 
-              {/* BAHARU: pagination sekali lagi di bawah, untuk mudah lepas habis baca 30 ayat */}
               {totalVersePages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', paddingTop: '10px' }}>
                   <button
@@ -1132,7 +1211,6 @@ export default function Home() {
           )}
         </div>
       ) : (
-        /* ----------------- PAPARAN SENARAI SURAH ----------------- */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px', marginTop: '10px' }}>
           {surahs.map((surah) => (
             <div
