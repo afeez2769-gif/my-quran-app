@@ -617,6 +617,10 @@ export default function Home() {
       <div className={darkMode ? 'dark-theme' : ''} style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: theme.bg, overflowY: 'auto', fontFamily: '"Inter", sans-serif', ['--mushaf-text-color' as any]: theme.text }}>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
         <style jsx global>{`
+          html, body {
+            overflow-x: hidden;
+            max-width: 100%;
+          }
           @font-face {
             font-family: 'UthmanicHafs';
             src: url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2') format('woff2'),
@@ -977,11 +981,15 @@ export default function Home() {
   }
 
   return (
-    <div className={darkMode ? 'dark-theme' : ''} style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: theme.bg, minHeight: '100vh', color: theme.text }}>
+    <div className={darkMode ? 'dark-theme' : ''} style={{ maxWidth: '850px', margin: '0 auto', padding: '25px', fontFamily: '"Inter", sans-serif', backgroundColor: theme.bg, minHeight: '100vh', color: theme.text, overflowX: 'hidden' }}>
 
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
 
       <style jsx global>{`
+        html, body {
+          overflow-x: hidden;
+          max-width: 100%;
+        }
         @font-face {
           font-family: 'UthmanicHafs';
           src: url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2') format('woff2'),
