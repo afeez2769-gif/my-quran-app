@@ -42,7 +42,7 @@ export default function AboutPage() {
           30 Juzuk
         </h1>
         <p style={{ color: theme.textMuted, fontSize: '14px', margin: 0 }}>
-          Al-Quran Digital — Tajwid Berwarna, Terjemahan Melayu & Bantuan Hafazan
+          Hafazan Al-Quran 30 Juzuk
         </p>
       </div>
 
@@ -76,19 +76,25 @@ export default function AboutPage() {
           theme={theme}
           icon="🙈"
           title="Mode Hafazan"
-          desc="Teks Arab di-blur secara automatik — tekan ayat untuk jelaskan semula. Cara mudah untuk uji hafazan sendiri tanpa bantuan visual."
+          desc="Teks Arab di-blur ikut ayat sebenar — tekan ayat untuk jelaskan semula. Tersedia dalam paparan surah biasa dan juga Mode Mushaf, cara mudah untuk uji hafazan sendiri tanpa bantuan visual."
         />
         <FeatureCard
           theme={theme}
           icon="✅"
           title="Tandakan Master"
-          desc="Tanda ayat yang dah dikuasai (perlukan log masuk). Status disimpan terus ke akaun anda, boleh disemak bila-bila masa."
+          desc="Tanda ayat yang dah dikuasai (perlukan log masuk) — dipapar dengan garis penanda halus. Status disimpan terus ke akaun anda, boleh disemak bila-bila masa, merentasi semua surah."
         />
         <FeatureCard
           theme={theme}
           icon="📖"
           title="Mode Mushaf"
-          desc="Baca ikut susun-atur 604 muka surat SEBENAR (sama seperti mushaf cetak) — baris demi baris tepat, lengkap dengan penanda Juzuk dan nama surah. Data disimpan terus dalam aplikasi, tidak bergantung pada sambungan luar semasa membaca."
+          desc="Baca ikut susun-atur 604 muka surat SEBENAR (sama seperti mushaf cetak) — baris demi baris tepat, nama surah dalam tulisan Arab, lengkap dengan penanda Juzuk. Data disimpan terus dalam aplikasi, tidak bergantung pada sambungan luar semasa membaca."
+        />
+        <FeatureCard
+          theme={theme}
+          icon="🗺️"
+          title="Progress Bacaan & Roadmap"
+          desc="Jejak bacaan anda ikut muka surat, langkah demi langkah — tandakan muka surat selesai dibaca, dan sistem tak benarkan langkau ke hadapan. Halaman utama papar roadmap: sejauh mana anda sampai (muka surat & juzuk), dengan butang 'Sambung Baca' terus ke muka surat seterusnya."
         />
         <FeatureCard
           theme={theme}
@@ -101,6 +107,12 @@ export default function AboutPage() {
           icon="🌙"
           title="Mod Malam"
           desc="Paparan gelap untuk bacaan waktu malam yang lebih selesa pada mata, termasuk warna tajwid yang disesuaikan supaya kekal jelas dibaca."
+        />
+        <FeatureCard
+          theme={theme}
+          icon="📲"
+          title="Pasang Sebagai Aplikasi"
+          desc="30 Juzuk boleh dipasang terus ke skrin utama telefon/komputer (PWA) — buka macam aplikasi biasa, tanpa bar alamat browser."
         />
       </div>
 
