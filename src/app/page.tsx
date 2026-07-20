@@ -144,9 +144,7 @@ function MushafLine({
                     // dan walaupun ada jurang kecil antara perkataan, mata tetap baca
                     // sebagai satu garis berterusan. border-bottom cuma tambah TINGGI,
                     // langsung tak sentuh lebar — 100% selamat untuk algoritma fit().
-                    borderBottom: wState.highlighted ? '2px solid #16a34a' : '2px solid transparent',
-                    paddingBottom: '0px',
-                    lineHeight: wState.highlighted ? '1.1' : 'inherit',
+                    borderBottom: wState.highlighted ? '2px solid rgba(22,163,74,0.45)' : '2px solid transparent',
                     filter: wState.blurred ? 'blur(6px)' : 'none',
                     cursor: wState.onClick ? 'pointer' : 'default',
                     userSelect: wState.blurred ? 'none' : 'auto',
