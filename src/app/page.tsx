@@ -148,6 +148,7 @@ function MushafLine({
             style={{
               display: 'inline-flex',
               alignItems: 'baseline',
+              lineHeight: '1.3', // BAHARU: elak warisi line-height 2.3 dari .mushaf-line (punca highlight nampak "penuh baris")
               gap: '0.22em',
               padding: '0.08em 0.05em',
               filter: state.blurred ? 'blur(6px)' : 'none',
