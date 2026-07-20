@@ -50,8 +50,8 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-          to: process.env.RESEND_FROM_EMAIL ? batch : [batch[0]], // guna 'to' ramai hanya bila domain sendiri disahkan
-          bcc: process.env.RESEND_FROM_EMAIL ? undefined : batch, // fallback: guna bcc kalau masih guna domain ujian
+          to: process.env.RESEND_FROM_EMAIL || batch[0], // domain sah: hantar pada diri sendiri; belum sah: fallback ke e-mel admin (had ujian Resend)
+          bcc: batch, // penerima sebenar letak dalam BCC — elak mereka nampak e-mel satu sama lain
           subject,
           html: `<div style="font-family: sans-serif; font-size: 15px; line-height: 1.6; color: #0f172a;">${message.replace(/\n/g, '<br/>')}</div>`,
         }),
