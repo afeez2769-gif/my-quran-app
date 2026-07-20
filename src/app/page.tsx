@@ -450,6 +450,73 @@ export default function Home() {
   };
   // -------------------------------------------------------------------------
 
+  // --- BAHARU: progress bacaan ikut MUKA SURAT (sequential, tak boleh langkau) ---
+  // satu nombor sahaja disimpan: muka surat TERAKHIR yang disahkan selesai
+  const [lastCompletedPage, setLastCompletedPage] = useState<number>(0);
+  const [savingPageProgress, setSavingPageProgress] = useState<boolean>(false);
+
+  const fetchReadingProgress = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('reading_progress')
+      .select('last_completed_page')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+    setLastCompletedPage(data?.last_completed_page || 0);
+  };
+
+  useEffect(() => {
+    if (user) fetchReadingProgress(user.id);
+  }, [user]);
+
+  // tandakan muka surat SEMASA sebagai selesai — hanya dibenarkan kalau ia
+  // tepat muka surat SETERUSNYA dari progress terakhir (elak langkau)
+  const markPageCompleted = async (pageNumber: number) => {
+    if (!user) return;
+    if (pageNumber !== lastCompletedPage + 1) return; // jaringan keselamatan tambahan
+
+    setSavingPageProgress(true);
+
+    const { error } = await supabase
+      .from('reading_progress')
+      .upsert(
+        {
+          user_id: user.id,
+          last_completed_page: pageNumber,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+
+    if (!error) {
+      setLastCompletedPage(pageNumber);
+    }
+
+    setSavingPageProgress(false);
+  };
+
+  // juzuk untuk mana-mana nombor muka surat (guna untuk roadmap & footer)
+  const juzForPage = (pageNumber: number): number => {
+    let active = JUZ_STARTS[0];
+    for (const j of JUZ_STARTS) {
+      if (j.p <= pageNumber) active = j;
+      else break;
+    }
+    return active ? active.j : 1;
+  };
+
+  // sambung terus ke muka surat seterusnya yang belum selesai
+  const continueReading = () => {
+    setCurrentPage(Math.min(604, lastCompletedPage + 1));
+    setSelectedSurah(null);
+    setMushafMode(true);
+  };
+  // -------------------------------------------------------------------------
+
   // --- BAHARU: kawalan Papar Terjemahan & Mode Hafazan -------------------
   const [showTranslation, setShowTranslation] = useState<boolean>(true);
   const [hafazanMode, setHafazanMode] = useState<boolean>(false);
@@ -847,6 +914,37 @@ export default function Home() {
               {currentSurahInfo?.name_complex || ''} • Juzuk {currentJuzNumber}
             </span>
           </div>
+
+          {/* BAHARU: tanda muka surat semasa selesai — sequential, tak boleh langkau */}
+          {user && (
+            <div style={{ textAlign: 'center', padding: '4px 4px 16px 4px' }}>
+              {currentPage <= lastCompletedPage ? (
+                <span style={{
+                  display: 'inline-block', padding: '6px 16px', borderRadius: '20px',
+                  border: '1px solid #16a34a', backgroundColor: '#16a34a', color: '#ffffff',
+                  fontSize: '12px', fontWeight: 600,
+                }}>
+                  ✓ Muka Surat Ini Sudah Selesai
+                </span>
+              ) : currentPage === lastCompletedPage + 1 ? (
+                <button
+                  onClick={() => markPageCompleted(currentPage)}
+                  disabled={savingPageProgress}
+                  style={{
+                    padding: '8px 18px', borderRadius: '20px', border: 'none',
+                    backgroundColor: '#16a34a', color: '#ffffff', fontSize: '13px', fontWeight: 600,
+                    cursor: savingPageProgress ? 'wait' : 'pointer', opacity: savingPageProgress ? 0.6 : 1,
+                  }}
+                >
+                  {savingPageProgress ? 'Menyimpan...' : '✓ Tandakan Muka Surat Ini Selesai'}
+                </button>
+              ) : (
+                <span style={{ fontSize: '11px', color: theme.textMuted }}>
+                  🔒 Selesaikan Muka Surat {lastCompletedPage + 1} dahulu untuk teruskan progress
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -955,7 +1053,7 @@ export default function Home() {
         🕋 30 Juzuk
       </h1>
       <p style={{ textAlign: 'center', color: theme.textMuted, fontSize: '14px', marginTop: 0 }}>
-        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Hafazan Al-Quran 30 Juzuk — Tajwid Berwarna & Terjemahan Malaysia"}
+        {selectedSurah ? "⬅️ Klik logo untuk kembali ke senarai surah" : "Hafazan Al-Quran 30 Juzuk"}
       </p>
 
       {!selectedSurah && !mushafMode && (
@@ -985,6 +1083,47 @@ export default function Home() {
           </button>
         </div>
       )}
+
+      {/* BAHARU: Roadmap — tunjuk progress bacaan semasa (muka surat & juzuk) */}
+      {!selectedSurah && !mushafMode && user && (
+        <div style={{ backgroundColor: theme.card, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '18px 20px', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '15px', color: theme.text, margin: '0 0 10px 0' }}>🗺️ Roadmap Bacaan Anda</h2>
+          {lastCompletedPage === 0 ? (
+            <p style={{ fontSize: '13px', color: theme.textMuted, margin: '0 0 12px 0' }}>
+              Belum mula lagi — mula dari Muka Surat 1.
+            </p>
+          ) : (
+            <p style={{ fontSize: '13px', color: theme.textMuted, margin: '0 0 12px 0' }}>
+              Anda telah sampai <strong style={{ color: theme.text }}>Muka Surat {lastCompletedPage}</strong> — Juzuk <strong style={{ color: theme.text }}>{juzForPage(lastCompletedPage)}</strong>
+              {lastCompletedPage >= 604 && ' — Tahniah, khatam! 🎉'}
+            </p>
+          )}
+          {lastCompletedPage < 604 && (
+            <button
+              onClick={continueReading}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '20px',
+                border: 'none',
+                backgroundColor: '#0f766e',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              ▶ Sambung Baca (Muka Surat {lastCompletedPage + 1})
+            </button>
+          )}
+        </div>
+      )}
+
+      {!selectedSurah && !mushafMode && !user && (
+        <p style={{ fontSize: '12px', color: theme.textMuted, textAlign: 'center', margin: '0 0 16px 0' }}>
+          Log masuk untuk jejak progress bacaan anda ikut muka surat
+        </p>
+      )}
+
 
       <hr style={{ border: '0', borderTop: `1px solid ${theme.border}`, margin: '20px 0' }} />
 
