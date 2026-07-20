@@ -915,13 +915,13 @@ export default function Home() {
               {/* BAHARU: tanda selesai baca — kecil, sebelah nombor muka surat */}
               {user && (
                 currentPage <= lastCompletedPage ? (
-                  <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Selesai Baca</span>
+                  <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Selesai</span>
                 ) : currentPage === lastCompletedPage + 1 ? (
                   <span
                     onClick={() => !savingPageProgress && markPageCompleted(currentPage)}
-                    style={{ color: theme.accent, fontWeight: 600, textDecoration: 'underline', cursor: savingPageProgress ? 'wait' : 'pointer' }}
+                    style={{ color: theme.text, fontWeight: 600, textDecoration: 'underline', cursor: savingPageProgress ? 'wait' : 'pointer' }}
                   >
-                    {savingPageProgress ? 'Menyimpan...' : 'klik jika sudah selesai baca'}
+                    {savingPageProgress ? '...' : 'Selesai Baca?'}
                   </span>
                 ) : null
               )}
