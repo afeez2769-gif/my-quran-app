@@ -991,8 +991,10 @@ export default function Home() {
       {selectedSurah ? (
         <div>
           <div style={{ backgroundColor: theme.card, padding: '25px', borderRadius: '12px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
-            <h2 style={{ color: '#0f766e', margin: '0 0 8px 0', fontSize: '24px' }}>{selectedSurah.name_complex}</h2>
+            <h2 dir="rtl" style={{ color: '#0f766e', margin: '0 0 8px 0', fontSize: '30px', fontFamily: "'UthmanicHafs', serif" }}>{selectedSurah.name_arabic}</h2>
             <div style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
+              <span>{selectedSurah.name_complex}</span>
+              <span style={{ margin: '0 10px' }}>•</span>
               <span>{selectedSurah.revelation_place === 'makkah' ? 'Makkiyah' : 'Madaniyah'}</span>
               <span style={{ margin: '0 10px' }}>•</span>
               <span>{selectedSurah.verses_count} Ayat</span>
