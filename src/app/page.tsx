@@ -148,7 +148,7 @@ function MushafLine({
               display: 'inline-flex',
               gap: '0.22em',
               filter: state.blurred ? 'blur(6px)' : 'none',
-              backgroundColor: state.highlighted ? 'rgba(34,197,94,0.16)' : 'transparent', // BAHARU: opacity dikurangkan (0.28 -> 0.16) supaya nampak lebih nipis/lembut
+              backgroundColor: state.highlighted ? 'rgba(34,197,94,0.28)' : 'transparent',
               borderRadius: '6px',
               cursor: state.onClick ? 'pointer' : 'default',
               userSelect: state.blurred ? 'none' : 'auto',
