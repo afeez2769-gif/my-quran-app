@@ -189,7 +189,7 @@ export default function Home() {
   // (bukan seluruh baris), supaya satu baris yang ada 2 ayat boleh
   // dibuka/blur berasingan
   const [mushafHafazanMode, setMushafHafazanMode] = useState<boolean>(false);
-  const [revealedAyahs, setRevealedMushafAyahs] = useState<Set<string>>(new Set());
+  const [mushafRevealedAyahs, setMushafRevealedAyahs] = useState<Set<string>>(new Set());
 
   const toggleRevealedAyah = (key: string) => {
     setRevealedMushafAyahs((prev) => {
@@ -784,7 +784,7 @@ export default function Home() {
                   // jadi kekal sebagai SATU segmen sahaja (blur/reveal seperti baris biasa,
                   // tiada tanda master sebab tiada nombor ayat untuk dilekatkan)
                   const bismillahKey = `bismillah-${line.p}-${line.l}`;
-                  const isRevealed = revealedAyahs.has(bismillahKey);
+                  const isRevealed = mushafRevealedAyahs.has(bismillahKey);
                   return (
                     <div key={idx}>
                       {juzBadge}
@@ -825,7 +825,7 @@ export default function Home() {
                         const isSaving = savingAyahKey === key;
 
                         if (mushafHafazanMode) {
-                          const isRevealed = revealedAyahs.has(key);
+                          const isRevealed = mushafRevealedAyahs.has(key);
                           return {
                             blurred: !isRevealed,
                             onClick: () => toggleRevealedAyah(key),
