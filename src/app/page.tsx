@@ -42,14 +42,14 @@ function getMushafBaseFontSize() {
 
 function MushafLine({
   words,
-  ayahCodes,
   centered,
-  getSegmentState,
+  blurred,
+  onClick,
 }: {
   words: string[];
-  ayahCodes: number[]; // sama panjang dengan words — kod surah*1000+ayah setiap perkataan (0 = tiada ayat, contoh Bismillah pembuka)
   centered: boolean;
-  getSegmentState?: (ayahCode: number) => { blurred?: boolean; highlighted?: boolean; onClick?: () => void };
+  blurred?: boolean;
+  onClick?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -111,60 +111,31 @@ function MushafLine({
     };
   }, [wordsKey, canJustify]);
 
-  // BAHARU: kumpulkan perkataan bersebelahan yang sama ayat jadi satu "segmen"
-  // — setiap segmen inilah unit klik/blur/highlight berasingan
-  const segments: { code: number; words: string[]; indices: number[] }[] = [];
-  words.forEach((w, i) => {
-    const code = ayahCodes[i] || 0;
-    const last = segments[segments.length - 1];
-    if (last && last.code === code) {
-      last.words.push(w);
-      last.indices.push(i);
-    } else {
-      segments.push({ code, words: [w], indices: [i] });
-    }
-  });
-
   return (
     <div
       ref={containerRef}
       dir="rtl"
       className="mushaf-line"
+      onClick={onClick}
       style={{
         display: 'flex',
         justifyContent: useJustify ? 'space-between' : 'center',
         width: '100%',
         whiteSpace: 'nowrap',
         fontSize: `${fontSize}px`,
+        filter: blurred ? 'blur(6px)' : 'none',
+        cursor: onClick ? 'pointer' : 'default',
+        userSelect: blurred ? 'none' : 'auto',
+        transition: 'filter 0.2s ease',
       }}
     >
-      {segments.map((seg, si) => {
-        const state = getSegmentState ? getSegmentState(seg.code) : {};
-        return (
-          <span
-            key={si}
-            onClick={state.onClick}
-            style={{
-              display: 'inline-flex',
-              gap: '0.22em',
-              filter: state.blurred ? 'blur(6px)' : 'none',
-              backgroundColor: state.highlighted ? 'rgba(34,197,94,0.28)' : 'transparent',
-              borderRadius: '6px',
-              cursor: state.onClick ? 'pointer' : 'default',
-              userSelect: state.blurred ? 'none' : 'auto',
-              transition: 'filter 0.2s ease, background-color 0.2s ease',
-            }}
-          >
-            {seg.words.map((word, wi) => (
-              <span
-                key={wi}
-                ref={(el) => { wordRefs.current[seg.indices[wi]] = el; }}
-                dangerouslySetInnerHTML={{ __html: word }}
-              />
-            ))}
-          </span>
-        );
-      })}
+      {words.map((word, i) => (
+        <span
+          key={i}
+          ref={(el) => { wordRefs.current[i] = el; }}
+          dangerouslySetInnerHTML={{ __html: word }}
+        />
+      ))}
     </div>
   );
 }
@@ -182,17 +153,15 @@ export default function Home() {
   const [pageInput, setPageInput] = useState<string>('1');
   const [mushafLayout, setMushafLayout] = useState<any[] | null>(null); // semua 9046 baris (dimuat sekali sahaja)
   const [mushafWords, setMushafWords] = useState<string[] | null>(null); // semua 83668 perkataan (dimuat sekali sahaja)
-  const [wordAyahMap, setWordAyahMap] = useState<number[] | null>(null); // word_id -> (surah*1000+ayah)
   const [loadingMushafData, setLoadingMushafData] = useState<boolean>(false);
 
-  // BAHARU: Mode Hafazan dalam Mode Mushaf — blur ikut AYAT sebenar
-  // (bukan seluruh baris), supaya satu baris yang ada 2 ayat boleh
-  // dibuka/blur berasingan
+  // BAHARU: Mode Hafazan dalam Mode Mushaf — blur ikut BARIS (bukan ayat),
+  // sepadan dengan cara sebenar penghafal guna mushaf cetak
   const [mushafHafazanMode, setMushafHafazanMode] = useState<boolean>(false);
-  const [mushafRevealedAyahs, setMushafRevealedAyahs] = useState<Set<string>>(new Set());
+  const [revealedLines, setRevealedLines] = useState<Set<string>>(new Set());
 
-  const toggleRevealedAyah = (key: string) => {
-    setMushafRevealedAyahs((prev) => {
+  const toggleRevealedLine = (key: string) => {
+    setRevealedLines((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -200,43 +169,22 @@ export default function Home() {
     });
   };
 
-  // reset ayat terdedah bila tukar muka surat, supaya semua blur semula
+  // reset baris terdedah bila tukar muka surat, supaya semua blur semula
   useEffect(() => {
-    setMushafRevealedAyahs(new Set());
+    setRevealedLines(new Set());
   }, [currentPage]);
 
-  // BAHARU: progress "master" MERENTASI SEMUA SURAH (untuk Mode Mushaf, sebab
-  // satu muka surat boleh ada lebih dari satu surah) — kunci format "surah:ayah"
-  const [allMasteredSet, setAllMasteredSet] = useState<Set<string>>(new Set());
-  const [savingAyahKey, setSavingAyahKey] = useState<string | null>(null);
-
-  const fetchAllMastered = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('hafazan_progress')
-      .select('surah_number, ayah_number')
-      .eq('user_id', userId)
-      .eq('status', 'master');
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-    setAllMasteredSet(new Set((data || []).map((r: any) => `${r.surah_number}:${r.ayah_number}`)));
-  };
-
-  // muat layout.json, words.json & word-ayah-map.json SEKALI sahaja apabila Mode Mushaf dibuka buat pertama kali
+  // muat layout.json & words.json SEKALI sahaja apabila Mode Mushaf dibuka buat pertama kali
   useEffect(() => {
     if (mushafMode && !mushafLayout) {
       setLoadingMushafData(true);
       Promise.all([
         fetch('/quran-data/layout.json').then(res => res.json()),
         fetch('/quran-data/words.json').then(res => res.json()),
-        fetch('/quran-data/word-ayah-map.json').then(res => res.json()),
       ])
-        .then(([layoutData, wordsData, ayahMapData]) => {
+        .then(([layoutData, wordsData]) => {
           setMushafLayout(layoutData);
           setMushafWords(wordsData);
-          setWordAyahMap(ayahMapData);
           setLoadingMushafData(false);
         })
         .catch(err => {
@@ -245,49 +193,6 @@ export default function Home() {
         });
     }
   }, [mushafMode, mushafLayout]);
-
-  // BAHARU: togol status master untuk SATU ayat sahaja (ringkas — setiap
-  // segmen dalam MushafLine ialah satu ayat, jadi tak perlu kumpul beberapa ayat lagi)
-  const toggleAyahMastered = async (surah: number, ayah: number, key: string) => {
-    if (!user) return;
-    setSavingAyahKey(key);
-
-    const already = allMasteredSet.has(key);
-
-    if (already) {
-      await supabase
-        .from('hafazan_progress')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('surah_number', surah)
-        .eq('ayah_number', ayah);
-      setAllMasteredSet((prev) => {
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
-    } else {
-      await supabase
-        .from('hafazan_progress')
-        .upsert(
-          {
-            user_id: user.id,
-            surah_number: surah,
-            ayah_number: ayah,
-            status: 'master',
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,surah_number,ayah_number' }
-        );
-      setAllMasteredSet((prev) => {
-        const next = new Set(prev);
-        next.add(key);
-        return next;
-      });
-    }
-
-    setSavingAyahKey(null);
-  };
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -373,13 +278,6 @@ export default function Home() {
   // simpan nombor ayat yang dah ditanda "master" untuk surah semasa
   const [masteredAyahs, setMasteredAyahs] = useState<Set<number>>(new Set());
   const [savingAyah, setSavingAyah] = useState<number | null>(null); // elak double-click semasa simpan
-
-  // BAHARU: muat progress master (merentasi semua surah) bila Mode Mushaf dibuka & user log masuk
-  useEffect(() => {
-    if (mushafMode && user) {
-      fetchAllMastered(user.id);
-    }
-  }, [mushafMode, user]);
 
   useEffect(() => {
     // semak sesi log masuk semasa app pertama kali load
@@ -720,11 +618,6 @@ export default function Home() {
         </div>
 
         <div className="mushaf-outer" style={{ maxWidth: '680px', margin: '0 auto', padding: '15px 15px 40px 15px' }}>
-          {user && !mushafHafazanMode && (
-            <p style={{ textAlign: 'center', color: theme.textMuted, fontSize: '11px', margin: '0 0 10px 0' }}>
-              👆 Tekan mana-mana ayat untuk tanda/buang tanda hafaz
-            </p>
-          )}
           {loadingMushafData ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan data mushaf (sekali sahaja, lepas ni pantas)...</p>
           ) : (
@@ -780,23 +673,17 @@ export default function Home() {
                 }
 
                 if (line.t === 'basmallah') {
-                  // Bismillah pembuka (bukan Al-Fatihah) — bukan ayat bernombor,
-                  // jadi kekal sebagai SATU segmen sahaja (blur/reveal seperti baris biasa,
-                  // tiada tanda master sebab tiada nombor ayat untuk dilekatkan)
-                  const bismillahKey = `bismillah-${line.p}-${line.l}`;
-                  const isRevealed = mushafRevealedAyahs.has(bismillahKey);
+                  const lineKey = `${line.p}-${line.l}`;
+                  const isRevealed = revealedLines.has(lineKey);
                   return (
                     <div key={idx}>
                       {juzBadge}
                       <div style={{ margin: '10px 0' }}>
                         <MushafLine
                           words={BISMILLAH_WORDS}
-                          ayahCodes={BISMILLAH_WORDS.map(() => 0)}
                           centered={true}
-                          getSegmentState={() => ({
-                            blurred: mushafHafazanMode && !isRevealed,
-                            onClick: mushafHafazanMode ? () => toggleRevealedAyah(bismillahKey) : undefined,
-                          })}
+                          blurred={mushafHafazanMode && !isRevealed}
+                          onClick={mushafHafazanMode ? () => toggleRevealedLine(lineKey) : undefined}
                         />
                       </div>
                     </div>
@@ -806,37 +693,18 @@ export default function Home() {
                 const lineWords = mushafWords && line.f && line.e
                   ? mushafWords.slice(line.f - 1, line.e)
                   : [];
-                const lineAyahCodes = wordAyahMap && line.f && line.e
-                  ? Array.from({ length: line.e - line.f + 1 }, (_, i) => wordAyahMap[line.f - 1 + i] || 0)
-                  : lineWords.map(() => 0);
+
+                const lineKey = `${line.p}-${line.l}`;
+                const isRevealed = revealedLines.has(lineKey);
 
                 return (
                   <div key={idx}>
                     {juzBadge}
                     <MushafLine
                       words={lineWords}
-                      ayahCodes={lineAyahCodes}
                       centered={!!line.c}
-                      getSegmentState={(code) => {
-                        if (!code) return {};
-                        const surah = Math.floor(code / 1000);
-                        const ayah = code % 1000;
-                        const key = `${surah}:${ayah}`;
-                        const isSaving = savingAyahKey === key;
-
-                        if (mushafHafazanMode) {
-                          const isRevealed = mushafRevealedAyahs.has(key);
-                          return {
-                            blurred: !isRevealed,
-                            onClick: () => toggleRevealedAyah(key),
-                          };
-                        }
-
-                        return {
-                          highlighted: allMasteredSet.has(key),
-                          onClick: user && !isSaving ? () => toggleAyahMastered(surah, ayah, key) : undefined,
-                        };
-                      }}
+                      blurred={mushafHafazanMode && !isRevealed}
+                      onClick={mushafHafazanMode ? () => toggleRevealedLine(lineKey) : undefined}
                     />
                   </div>
                 );
