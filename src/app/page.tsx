@@ -1326,7 +1326,7 @@ export default function Home() {
                       dir="rtl"
                       onClick={() => hafazanMode && toggleReveal(verse.id)}
                       style={{
-                        fontSize: '32px',
+                        fontSize: '36px',
                         fontFamily: "'UthmanicHafs', serif",
                         lineHeight: '2.5',
                         textAlign: 'right',
