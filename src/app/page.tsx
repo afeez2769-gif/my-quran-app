@@ -1216,7 +1216,7 @@ export default function Home() {
           {loadingVerses ? (
             <p style={{ textAlign: 'center', color: '#64748b', fontWeight: '500' }}>Sedang memuatkan tajwid berwarna...</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
               {totalVersePages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
@@ -1279,13 +1279,13 @@ export default function Home() {
                     key={verse.id}
                     style={{
                       backgroundColor: theme.card,
-                      padding: '30px',
+                      padding: '20px',
                       borderRadius: '12px',
                       border: isMastered ? '1px solid #16a34a' : `1px solid ${theme.border}`,
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '20px'
+                      gap: '12px'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
