@@ -1328,7 +1328,8 @@ export default function Home() {
                       style={{
                         fontSize: '36px',
                         fontFamily: "'UthmanicHafs', serif",
-                        lineHeight: '2.5',
+                        fontWeight: 'bold',
+                        lineHeight: '2.0',
                         textAlign: 'right',
                         direction: 'rtl',
                         color: theme.text,
