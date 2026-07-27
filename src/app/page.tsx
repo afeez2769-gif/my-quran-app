@@ -656,7 +656,8 @@ export default function Home() {
 
           .mushaf-line {
             font-family: 'UthmanicHafs', serif;
-            line-height: 2.3;
+            font-weight: bold;
+            line-height: 1.9;
             color: var(--mushaf-text-color, #111827);
             transition: font-size 0.1s ease-out;
           }
