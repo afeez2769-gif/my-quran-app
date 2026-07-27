@@ -1423,6 +1423,21 @@ export default function Home() {
           ))}
         </div>
       )}
+
+      {/* BAHARU: pautan ke projek lain — Jamazan */}
+      {!selectedSurah && (
+        <div style={{ textAlign: 'center', marginTop: '30px', paddingTop: '20px', borderTop: `1px solid ${theme.border}` }}>
+          <p style={{ fontSize: '12px', color: theme.textMuted, margin: '0 0 6px 0' }}>Projek lain dari kami:</p>
+          <a
+            href="https://jamazan.30juzuk.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: '13px', color: theme.accent, fontWeight: 600, textDecoration: 'none' }}
+          >
+            🕌 Jamazan — Jam Waktu Solat untuk Masjid (Skrin TV) →
+          </a>
+        </div>
+      )}
     </div>
   );
 }
