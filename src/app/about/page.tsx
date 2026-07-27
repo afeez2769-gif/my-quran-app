@@ -151,6 +151,22 @@ export default function AboutPage() {
         </p>
       </div>
 
+      {/* BAHARU: Projek Lain */}
+      <h2 style={{ fontSize: '18px', color: theme.accent, margin: '30px 0 14px 0' }}>🕌 Projek Lain</h2>
+      <div style={{ backgroundColor: theme.card, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '20px 24px' }}>
+        <p style={{ fontSize: '14px', color: theme.textMuted, margin: '0 0 10px 0', lineHeight: '1.7' }}>
+          <strong style={{ color: theme.text }}>Jamazan</strong> — paparan jam waktu solat untuk skrin TV di masjid/surau, senang dipasang dan dipaparkan sepanjang hari.
+        </p>
+        <a
+          href="https://jamazan.30juzuk.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: '13px', color: theme.accent, fontWeight: 600, textDecoration: 'none' }}
+        >
+          Lawati jamazan.30juzuk.com →
+        </a>
+      </div>
+
       {/* Nota */}
       <p style={{ fontSize: '12px', color: theme.textMuted, textAlign: 'center', marginTop: '30px', lineHeight: '1.7' }}>
         Al-Quran adalah kalam Allah SWT. Kami berusaha memastikan ketepatan teks dan tajwid,
