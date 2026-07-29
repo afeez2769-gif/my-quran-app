@@ -320,6 +320,14 @@ export default function Home() {
   }, [arabicFont]);
 
   const arabicFontFamily = arabicFont === 'lpmq' ? "'LPMQIsepMisbah', serif" : "'UthmanicHafs', serif";
+
+  // BAHARU: glyph sukun (U+06E1) dalam font LPMQ Isep Misbah rupanya KOSONG
+  // (tiada lukisan) — tukar ganti ke sukun standard (U+0652) yang ADA lukisan
+  // dalam font tu, khas bila font LPMQ dipilih sahaja.
+  const fixArabicText = (html: string): string => {
+    if (arabicFont !== 'lpmq') return html;
+    return html.replace(/\u06E1/g, '\u0652');
+  };
   // -------------------------------------------------------------------------
 
   // --- BAHARU: status log masuk & progress hafazan -----------------------
@@ -903,7 +911,7 @@ export default function Home() {
                       {juzBadge}
                       <div style={{ margin: '10px 0' }}>
                         <MushafLine
-                          words={BISMILLAH_WORDS}
+                          words={BISMILLAH_WORDS.map(fixArabicText)}
                           centered={true}
                           blurred={mushafHafazanMode && !isRevealed}
                           onClick={mushafHafazanMode ? () => toggleRevealedLine(lineKey) : undefined}
@@ -914,7 +922,7 @@ export default function Home() {
                 }
 
                 const lineWords = mushafWords && line.f && line.e
-                  ? mushafWords.slice(line.f - 1, line.e)
+                  ? mushafWords.slice(line.f - 1, line.e).map(fixArabicText)
                   : [];
                 const lineAyahCodes = wordAyahMap && line.f && line.e
                   ? Array.from({ length: line.e - line.f + 1 }, (_, i) => wordAyahMap[line.f - 1 + i] || 0)
@@ -1321,7 +1329,7 @@ export default function Home() {
                       fontFamily: arabicFontFamily,
                       textAlign: 'center',
                     }}
-                    dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
+                    dangerouslySetInnerHTML={{ __html: fixArabicText(BISMILLAH_HTML) }}
                   />
                 </div>
               )}
@@ -1398,7 +1406,7 @@ export default function Home() {
                         userSelect: isBlurred ? 'none' : 'auto',
                         transition: 'filter 0.25s ease',
                       }}
-                      dangerouslySetInnerHTML={{ __html: verse.text_uthmani_tajweed }}
+                      dangerouslySetInnerHTML={{ __html: fixArabicText(verse.text_uthmani_tajweed) }}
                     />
 
                     {showTranslation && !hafazanMode && (
