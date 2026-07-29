@@ -305,6 +305,23 @@ export default function Home() {
   };
   // -------------------------------------------------------------------------
 
+  // --- BAHARU: Pilihan Font Arab (UthmanicHafs / LPMQ Isep Misbah) --------
+  const [arabicFont, setArabicFont] = useState<'uthmani' | 'lpmq'>('uthmani');
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('arabicFont') : null;
+    if (saved === 'lpmq' || saved === 'uthmani') setArabicFont(saved);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('arabicFont', arabicFont);
+    }
+  }, [arabicFont]);
+
+  const arabicFontFamily = arabicFont === 'lpmq' ? "'LPMQIsepMisbah', serif" : "'UthmanicHafs', serif";
+  // -------------------------------------------------------------------------
+
   // --- BAHARU: status log masuk & progress hafazan -----------------------
   const [user, setUser] = useState<any>(null);
   const [masteredAyahs, setMasteredAyahs] = useState<Set<number>>(new Set());
@@ -627,6 +644,11 @@ export default function Home() {
                  url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.ttf') format('truetype');
             font-display: swap;
           }
+          @font-face {
+            font-family: 'LPMQIsepMisbah';
+            src: url('/fonts/LPMQIsepMisbah.woff') format('woff');
+            font-display: swap;
+          }
           tajweed[class="ham_wasl"],
           tajweed[class="slnt"],
           tajweed[class="laam_shamsiyah"] { color: #AAAAAA; }
@@ -655,7 +677,7 @@ export default function Home() {
           .dark-theme tajweed[class="madda_obligatory_monfasel"] { color: #6C8EFF; }
 
           .mushaf-line {
-            font-family: 'UthmanicHafs', serif;
+            font-family: ${arabicFontFamily};
             font-weight: 600;
             line-height: 1.9;
             color: var(--mushaf-text-color, #111827);
@@ -711,6 +733,23 @@ export default function Home() {
               }}
             >
               {darkMode ? '☀️' : '🌙'}
+            </button>
+
+            {/* BAHARU: togol pilihan font Arab */}
+            <button
+              onClick={() => setArabicFont((f) => (f === 'lpmq' ? 'uthmani' : 'lpmq'))}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '20px',
+                border: `1px solid ${theme.border}`,
+                backgroundColor: theme.card,
+                color: theme.text,
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              🔤 {arabicFont === 'lpmq' ? 'LPMQ' : 'Uthmani'}
             </button>
 
             <button
@@ -845,7 +884,7 @@ export default function Home() {
                           border: '1px solid #0f766e',
                           borderRadius: '8px',
                         }}>
-                          <div dir="rtl" style={{ fontFamily: "'UthmanicHafs', serif", fontSize: '23px', color: '#0f766e', fontWeight: 700 }}>
+                          <div dir="rtl" style={{ fontFamily: arabicFontFamily, fontSize: '23px', color: '#0f766e', fontWeight: 700 }}>
                             {surahInfo?.name_arabic || ''}
                           </div>
                           <div style={{ fontFamily: '"Inter", sans-serif', fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
@@ -997,6 +1036,11 @@ export default function Home() {
                url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.ttf') format('truetype');
           font-display: swap;
         }
+        @font-face {
+          font-family: 'LPMQIsepMisbah';
+          src: url('/fonts/LPMQIsepMisbah.woff') format('woff');
+          font-display: swap;
+        }
         tajweed[class="ham_wasl"],
         tajweed[class="slnt"],
         tajweed[class="laam_shamsiyah"] { color: #AAAAAA; }
@@ -1042,6 +1086,23 @@ export default function Home() {
           }}
         >
           {darkMode ? '☀️' : '🌙'}
+        </button>
+
+        {/* BAHARU: togol pilihan font Arab */}
+        <button
+          onClick={() => setArabicFont((f) => (f === 'lpmq' ? 'uthmani' : 'lpmq'))}
+          style={{
+            padding: '6px 12px',
+            borderRadius: '20px',
+            border: `1px solid ${theme.border}`,
+            backgroundColor: theme.card,
+            color: theme.text,
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          🔤 {arabicFont === 'lpmq' ? 'LPMQ' : 'Uthmani'}
         </button>
 
         {user ? (
@@ -1165,7 +1226,7 @@ export default function Home() {
       {selectedSurah ? (
         <div>
           <div style={{ backgroundColor: theme.card, padding: '25px', borderRadius: '12px', border: `1px solid ${theme.border}`, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginBottom: '25px', textAlign: 'center' }}>
-            <h2 dir="rtl" style={{ color: '#0f766e', margin: '0 0 8px 0', fontSize: '30px', fontFamily: "'UthmanicHafs', serif" }}>{selectedSurah.name_arabic}</h2>
+            <h2 dir="rtl" style={{ color: '#0f766e', margin: '0 0 8px 0', fontSize: '30px', fontFamily: arabicFontFamily }}>{selectedSurah.name_arabic}</h2>
             <div style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
               <span>{selectedSurah.name_complex}</span>
               <span style={{ margin: '0 10px' }}>•</span>
@@ -1258,7 +1319,7 @@ export default function Home() {
                     dir="rtl"
                     style={{
                       fontSize: '28px',
-                      fontFamily: "'UthmanicHafs', serif",
+                      fontFamily: arabicFontFamily,
                       textAlign: 'center',
                     }}
                     dangerouslySetInnerHTML={{ __html: BISMILLAH_HTML }}
@@ -1328,7 +1389,7 @@ export default function Home() {
                       onClick={() => hafazanMode && toggleReveal(verse.id)}
                       style={{
                         fontSize: '36px',
-                        fontFamily: "'UthmanicHafs', serif",
+                        fontFamily: arabicFontFamily,
                         lineHeight: '2.0',
                         textAlign: 'right',
                         direction: 'rtl',
@@ -1412,7 +1473,7 @@ export default function Home() {
                 {surah.id}
               </div>
               <div style={{ flex: 1 }}>
-                <div dir="rtl" style={{ fontFamily: "'UthmanicHafs', serif", fontWeight: '700', color: theme.text, fontSize: '22px' }}>
+                <div dir="rtl" style={{ fontFamily: arabicFontFamily, fontWeight: '700', color: theme.text, fontSize: '22px' }}>
                   {surah.name_arabic}
                 </div>
                 <div style={{ fontSize: '12px', color: theme.textMuted, marginTop: '3px' }}>
