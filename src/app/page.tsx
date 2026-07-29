@@ -678,7 +678,6 @@ export default function Home() {
 
           .mushaf-line {
             font-family: ${arabicFontFamily};
-            font-weight: 600;
             line-height: 1.9;
             color: var(--mushaf-text-color, #111827);
             transition: font-size 0.1s ease-out;
