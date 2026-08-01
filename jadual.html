@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jadual Waktu Solat — 30Juzuk</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --bg:#eef2ea; --card:#0f1f16; --card-2:#16281d;
+    --gold:#d4a24e; --gold-soft:#e6c07f; --cream:#f4f1e6;
+    --muted-on-dark:#8fa196; --muted:#6f7d76; --line:rgba(15,31,22,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--bg); font-family:'Inter',sans-serif; color:#12241a; min-height:100vh; display:flex; justify-content:center; }
+  .screen{ width:100%; max-width:420px; padding:22px 18px 40px; }
+  header{ display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+  .back{ width:38px;height:38px;border-radius:50%; background:#fff; border:1px solid var(--line); display:flex;align-items:center;justify-content:center; text-decoration:none; color:#12241a; font-size:18px; }
+  .back:hover{ background:#f4f1e6; }
+  header h1{ font-family:'Amiri',serif; font-size:22px; margin:0; color:#132018; }
+
+  .date-line{ font-size:13px; color:var(--muted); margin-bottom:18px; padding-left:2px; }
+
+  .list{
+    background:linear-gradient(165deg, var(--card), var(--card-2));
+    border-radius:22px; overflow:hidden;
+    box-shadow:0 20px 40px -18px rgba(15,31,22,0.5);
+  }
+  .row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; border-bottom:1px solid rgba(244,241,230,0.06);
+  }
+  .row:last-child{ border-bottom:none; }
+  .row.active{ background:rgba(212,162,78,0.1); }
+  .rname{ font-size:15px; font-weight:600; color:var(--cream); }
+  .rname .ar{ font-size:12px; color:var(--muted-on-dark); font-weight:400; margin-left:8px; }
+  .rtime{ font-size:16px; font-weight:700; color:var(--gold-soft); }
+  .row.active .rtime{ color:var(--gold); }
+
+  .jemaah-note{
+    margin-top:20px; background:#fff; border:1px solid var(--line);
+    border-radius:16px; padding:16px 18px; font-size:13px; color:var(--muted); line-height:1.6;
+  }
+  .jemaah-note b{ color:#12241a; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <header>
+    <a class="back" href="index.html">←</a>
+    <h1>Jadual Waktu Solat</h1>
+  </header>
+  <div class="date-line" id="dateLine">—</div>
+
+  <div class="list" id="list">
+    <div class="row" data-key="fajr"><div class="rname">Subuh</div><div class="rtime">--:--</div></div>
+    <div class="row" data-key="sunrise"><div class="rname">Syuruk</div><div class="rtime">--:--</div></div>
+    <div class="row" data-key="dhuhr"><div class="rname">Zohor</div><div class="rtime">--:--</div></div>
+    <div class="row" data-key="asr"><div class="rname">Asar</div><div class="rtime">--:--</div></div>
+    <div class="row" data-key="maghrib"><div class="rname">Maghrib</div><div class="rtime">--:--</div></div>
+    <div class="row" data-key="isha"><div class="rname">Isyak</div><div class="rtime">--:--</div></div>
+  </div>
+
+  <div class="jemaah-note">
+    <b>Waktu jemaah</b> di masjid/surau berhampiran akan dipaparkan di sini kelak — buat masa ini jadual menunjukkan waktu solat mengikut kiraan astronomi untuk lokasi anda.
+  </div>
+</div>
+
+<script src="prayertimes.js"></script>
+<script>
+(function(){
+  const dateLine = document.getElementById('dateLine');
+  const rows = document.querySelectorAll('.row');
+  const labels = {fajr:'Subuh',sunrise:'Syuruk',dhuhr:'Zohor',asr:'Asar',maghrib:'Maghrib',isha:'Isyak'};
+
+  function fmt(hoursFloat){
+    if (isNaN(hoursFloat)) return '--:--';
+    let h = Math.floor(hoursFloat), m = Math.round((hoursFloat-h)*60);
+    if(m===60){ m=0; h+=1; }
+    h = ((h%24)+24)%24;
+    const period = h>=12 ? 'PM':'AM';
+    let h12 = h%12; if(h12===0) h12=12;
+    return `${h12}:${String(m).padStart(2,'0')}${period}`;
+  }
+
+  function render(date, lat, lng, tz){
+    const t = PrayerTimes.getTimes(date, lat, lng, tz);
+    const now = date.getHours() + date.getMinutes()/60;
+    const order = ['fajr','sunrise','dhuhr','asr','maghrib','isha'];
+    let activeKey = [...order].reverse().find(k => k !== 'sunrise' && t[k] <= now) || null;
+    // find current period's prayer (last one passed, excluding sunrise as a "prayer")
+    let currentIdx = -1;
+    ['fajr','dhuhr','asr','maghrib','isha'].forEach((k,i) => { if(t[k] <= now) currentIdx = i; });
+    const activeOrder = ['fajr','dhuhr','asr','maghrib','isha'];
+    const activeName = currentIdx >= 0 ? activeOrder[currentIdx] : 'isha';
+
+    rows.forEach(r => {
+      const k = r.dataset.key;
+      r.querySelector('.rtime').textContent = fmt(t[k]);
+      r.classList.toggle('active', k === activeName);
+    });
+
+    dateLine.textContent = date.toLocaleDateString('ms-MY', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  }
+
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude, longitude } = pos.coords;
+      const tz = -new Date().getTimezoneOffset()/60;
+      render(new Date(), latitude, longitude, tz);
+    }, () => {
+      render(new Date(), 3.139, 101.6869, 8);
+    });
+  } else {
+    render(new Date(), 3.139, 101.6869, 8);
+  }
+})();
+</script>
+</body>
+</html>
