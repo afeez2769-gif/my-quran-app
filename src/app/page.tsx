@@ -1503,7 +1503,12 @@ export default function Home() {
             style={{ fontSize: '13px', color: theme.accent, fontWeight: 600, textDecoration: 'none' }}
           >
             🕌 Jamazan — Jam Waktu Solat untuk Masjid (Skrin TV) →
-          </a>
+          </a><a
+  href="/kiblat"
+  style={{ fontSize: '13px', color: theme.accent, fontWeight: 600, textDecoration: 'none', display: 'block', marginTop: '8px' }}
+>
+  🧭 Arah Kiblat →
+</a>
         </div>
       )}
     </div>
