@@ -238,6 +238,10 @@ function AzanCard() {
         .azan-kiblat-eyebrow{ font-size:9px; font-weight:600; letter-spacing:0.1em; color:#8fa196; text-transform:uppercase; }
         .azan-kiblat-title{ font-size:13px; font-weight:400; color:#f4f1e6; margin-top:2px; }
         .azan-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+        .azan-tasbih{ margin-top:10px; background:rgba(244,241,230,0.06); border:1px solid rgba(244,241,230,0.1); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; text-decoration:none; }
+        .azan-tasbih .azan-kiblat-icon{ width:30px;height:30px; }
+        .azan-tasbih .azan-kiblat-title{ flex:1; }
+        .azan-tasbih-arrow{ color:#d4a24e; font-size:16px; }
         .azan-pill{ background:rgba(244,241,230,0.05); border:1px solid rgba(244,241,230,0.08); border-radius:12px; padding:8px 2px; text-align:center; }
         .azan-pill.active{ background:rgba(212,162,78,0.14); border-color:#d4a24e; }
         .azan-pname{ font-size:9px; font-weight:600; color:#8fa196; }
@@ -271,6 +275,12 @@ function AzanCard() {
             </div>
           ))}
         </div>
+
+        <a className="azan-tasbih" href="/tasbih">
+          <div className="azan-kiblat-icon">📿</div>
+          <div className="azan-kiblat-title">Tasbih Zikir</div>
+          <div className="azan-tasbih-arrow">›</div>
+        </a>
       </div>
     </div>
   );
