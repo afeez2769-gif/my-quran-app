@@ -2,9 +2,24 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabaseClient';
 import { computeQiblaBearing } from '@/lib/prayertimes';
 
 export default function KiblatPage() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setAuthed(!!data.session?.user);
+      setAuthChecked(true);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthed(!!session?.user);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
   const [bearing, setBearing] = useState<number | null>(null);
   const [heading, setHeading] = useState(0);
   const [status, setStatus] = useState<{ text: string; type: 'idle' | 'ok' | 'err' }>({ text: 'Tekan butang untuk mula', type: 'idle' });
@@ -62,6 +77,28 @@ export default function KiblatPage() {
   }
 
   const ticks = Array.from({ length: 72 }, (_, i) => i);
+
+  if (!authChecked) {
+    return <div className="screen"><style>{css}</style><p style={{ textAlign: 'center', paddingTop: '60px', color: '#6f7d76' }}>Memeriksa log masuk...</p></div>;
+  }
+
+  if (!authed) {
+    return (
+      <div className="screen">
+        <style>{css}</style>
+        <header>
+          <Link className="back" href="/">←</Link>
+          <h1>Arah Kiblat</h1>
+        </header>
+        <div className="card login-gate">
+          <div className="login-gate-icon">🧭</div>
+          <div className="login-gate-title">Log masuk untuk buka kompas</div>
+          <p className="login-gate-text">Arah kiblat memerlukan akses lokasi peribadi anda — sila log masuk dahulu untuk meneruskan.</p>
+          <Link className="login-gate-btn" href="/login">Log Masuk</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="screen">
@@ -132,5 +169,9 @@ button{ margin-top:20px; background:var(--gold); color:#1b1206; border:none; pad
 button:disabled{ opacity:0.5; cursor:default; transform:none; }
 .note{ margin-top:20px; font-size:12.5px; color:var(--muted); text-align:center; line-height:1.5; }
 .note b{ color:#8a6420; }
+.login-gate{ align-items:center; text-align:center; padding:40px 24px; }
+.login-gate-icon{ font-size:36px; margin-bottom:12px; }
+.login-gate-title{ font-family:'Amiri',serif; font-size:19px; color:var(--cream); margin-bottom:8px; }
+.login-gate-text{ font-size:13px; color:var(--muted-on-dark); line-height:1.6; margin:0 0 20px; max-width:260px; }
+.login-gate-btn{ background:var(--gold); color:#1b1206; text-decoration:none; font-weight:700; font-size:14px; padding:12px 30px; border-radius:999px; }
 `;
-        
