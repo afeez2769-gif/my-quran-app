@@ -226,36 +226,42 @@ function AzanCard() {
     <div className="azan-card-wrap">
       <style>{`
         .azan-card-wrap{ max-width:480px; margin:16px auto; }
-        .azan-loc{ font-size:11px; font-weight:700; letter-spacing:0.14em; color:#d4a24e; text-transform:uppercase; margin-bottom:8px; }
+        .azan-loc{ font-size:11px; font-weight:600; letter-spacing:0.14em; color:#d4a24e; text-transform:uppercase; margin-bottom:8px; }
         .azan-card{ background:linear-gradient(165deg, #0f1f16, #16281d); border-radius:22px; padding:20px 18px 16px; position:relative; overflow:hidden; box-shadow:0 16px 32px -16px rgba(15,31,22,0.5); }
-        .azan-next-label{ font-size:11px; font-weight:700; letter-spacing:0.16em; color:#d4a24e; text-transform:uppercase; }
-        .azan-next-time{ font-family:Georgia,serif; font-size:42px; color:#f4f1e6; margin:2px 0; }
-        .azan-countdown{ font-size:12px; color:#8fa196; margin-bottom:14px; }
-        .azan-kiblat{ background:rgba(244,241,230,0.06); border:1px solid rgba(244,241,230,0.1); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; text-decoration:none; margin-bottom:14px; }
-        .azan-kiblat-icon{ width:34px;height:34px; border-radius:9px; background:rgba(212,162,78,0.15); display:flex;align-items:center;justify-content:center; font-size:16px; flex-shrink:0; }
-        .azan-kiblat-eyebrow{ font-size:10px; font-weight:700; letter-spacing:0.12em; color:#8fa196; text-transform:uppercase; }
-        .azan-kiblat-title{ font-size:14px; font-weight:600; color:#f4f1e6; }
+        .azan-top-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:16px; }
+        .azan-time-col{ flex:1; min-width:0; }
+        .azan-next-label{ font-size:11px; font-weight:600; letter-spacing:0.14em; color:#d4a24e; text-transform:uppercase; }
+        .azan-next-time{ font-family:Georgia,serif; font-weight:400; font-size:38px; color:#f4f1e6; margin:2px 0; }
+        .azan-countdown{ font-size:12px; font-weight:400; color:#8fa196; }
+        .azan-kiblat{ background:rgba(244,241,230,0.06); border:1px solid rgba(244,241,230,0.1); border-radius:14px; padding:12px 12px; display:flex; flex-direction:column; align-items:flex-start; gap:8px; text-decoration:none; width:118px; flex-shrink:0; }
+        .azan-kiblat-icon{ width:30px;height:30px; border-radius:8px; background:rgba(212,162,78,0.15); display:flex;align-items:center;justify-content:center; font-size:14px; }
+        .azan-kiblat-eyebrow{ font-size:9px; font-weight:600; letter-spacing:0.1em; color:#8fa196; text-transform:uppercase; }
+        .azan-kiblat-title{ font-size:13px; font-weight:400; color:#f4f1e6; margin-top:2px; }
         .azan-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
         .azan-pill{ background:rgba(244,241,230,0.05); border:1px solid rgba(244,241,230,0.08); border-radius:12px; padding:8px 2px; text-align:center; }
         .azan-pill.active{ background:rgba(212,162,78,0.14); border-color:#d4a24e; }
-        .azan-pname{ font-size:9px; font-weight:700; color:#8fa196; }
+        .azan-pname{ font-size:9px; font-weight:600; color:#8fa196; }
         .azan-pill.active .azan-pname{ color:#e6c07f; }
-        .azan-ptime{ font-size:12px; font-weight:700; color:#f4f1e6; margin-top:3px; }
+        .azan-ptime{ font-size:12px; font-weight:400; color:#f4f1e6; margin-top:3px; }
         .azan-pill.active .azan-ptime{ color:#d4a24e; }
       `}</style>
       <div className="azan-loc">📍 {locLabel}</div>
       <div className="azan-card">
-        <div className="azan-next-label">SELANJUTNYA · {labels[nextKey].toUpperCase()}</div>
-        <div className="azan-next-time">{times ? formatTime(times[nextKey]) : '--:--'}</div>
-        <div className="azan-countdown">{countdownText}</div>
-
-        <a className="azan-kiblat" href="/kiblat">
-          <div className="azan-kiblat-icon">🧭</div>
-          <div>
-            <div className="azan-kiblat-eyebrow">Arah Kiblat</div>
-            <div className="azan-kiblat-title">Buka Kompas</div>
+        <div className="azan-top-row">
+          <div className="azan-time-col">
+            <div className="azan-next-label">SELANJUTNYA · {labels[nextKey].toUpperCase()}</div>
+            <div className="azan-next-time">{times ? formatTime(times[nextKey]) : '--:--'}</div>
+            <div className="azan-countdown">{countdownText}</div>
           </div>
-        </a>
+
+          <a className="azan-kiblat" href="/kiblat">
+            <div className="azan-kiblat-icon">🧭</div>
+            <div>
+              <div className="azan-kiblat-eyebrow">Arah Kiblat</div>
+              <div className="azan-kiblat-title">Buka Kompas</div>
+            </div>
+          </a>
+        </div>
 
         <div className="azan-row">
           {order.map((k) => (
@@ -1189,7 +1195,7 @@ export default function Home() {
 
 
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
         <button
           onClick={() => setDarkMode((v) => !v)}
           style={{
