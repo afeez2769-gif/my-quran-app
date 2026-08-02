@@ -24,11 +24,11 @@ export default function KiblatPage() {
   const [heading, setHeading] = useState(0);
   const [status, setStatus] = useState<{ text: string; type: 'idle' | 'ok' | 'err' }>({ text: 'Tekan butang untuk mula', type: 'idle' });
   const [loading, setLoading] = useState(false);
-  const needleRef = useRef<HTMLDivElement>(null);
+  const needleRef = useRef<SVGGElement>(null);
 
   useEffect(() => {
     if (needleRef.current && bearing !== null) {
-      needleRef.current.style.transform = `translate(-50%,-50%) rotate(${bearing - heading}deg)`;
+      needleRef.current.style.transform = `rotate(${bearing - heading}deg)`;
     }
   }, [bearing, heading]);
 
@@ -110,22 +110,34 @@ export default function KiblatPage() {
 
       <div className="card">
         <div className="compass-wrap">
-          <div className="ring">
-            {ticks.map((i) => (
-              <div key={i} className={`tick${i % 9 === 0 ? ' major' : ''}`} style={{ transform: `translate(-50%,-50%) rotate(${i * 5}deg)` }} />
-            ))}
-            <span className="dir-label n">U</span>
-            <span className="dir-label e">T</span>
-            <span className="dir-label s">S</span>
-            <span className="dir-label w">B</span>
-          </div>
-          <div className="needle" ref={needleRef}>
-            <svg className="arrow" viewBox="0 0 24 196">
-              <polygon points="12,0 24,54 12,40 0,54" fill="#e6c07f" />
-              <rect x="10" y="40" width="4" height="136" fill="rgba(244,241,230,0.4)" rx="2" />
-            </svg>
-          </div>
-          <div className="kaaba">🕋</div>
+          <svg viewBox="0 0 300 300" className="compass-svg">
+            <circle cx="150" cy="150" r="148" fill="rgba(244,241,230,0.04)" stroke="rgba(212,162,78,0.35)" strokeWidth="1" />
+            {ticks.map((i) => {
+              const major = i % 9 === 0;
+              const len = major ? 18 : 12;
+              return (
+                <line
+                  key={i}
+                  x1="150" y1="18" x2="150" y2={18 + len}
+                  stroke={major ? 'rgba(244,241,230,0.55)' : 'rgba(244,241,230,0.3)'}
+                  strokeWidth={major ? 2.5 : 2}
+                  transform={`rotate(${i * 5} 150 150)`}
+                />
+              );
+            })}
+            <text x="150" y="34" textAnchor="middle" className="dir-label-svg n">U</text>
+            <text x="266" y="156" textAnchor="middle" className="dir-label-svg">T</text>
+            <text x="150" y="278" textAnchor="middle" className="dir-label-svg">S</text>
+            <text x="34" y="156" textAnchor="middle" className="dir-label-svg">B</text>
+
+            <g ref={needleRef} style={{ transformOrigin: '150px 150px' }}>
+              <polygon points="150,40 165,110 150,95 135,110" fill="#e6c07f" />
+              <rect x="146" y="95" width="8" height="90" rx="3" fill="rgba(244,241,230,0.4)" />
+            </g>
+
+            <rect x="132" y="132" width="36" height="36" rx="6" fill="#0d0d0d" stroke="#d4a24e" strokeWidth="2" />
+            <text x="150" y="157" textAnchor="middle" fontSize="20">🕋</text>
+          </svg>
         </div>
 
         <div className="angle">{bearing !== null ? bearing.toFixed(1) : '--'}<span>°</span></div>
@@ -149,17 +161,10 @@ header{ display:flex; align-items:center; gap:14px; margin-bottom:20px; }
 header h1{ font-family:'Amiri',serif; font-size:22px; margin:0; color:#132018; }
 .card{ background:linear-gradient(165deg, var(--card), var(--card-2)); border-radius:26px; padding:26px 20px 30px; position:relative; overflow:hidden; box-shadow:0 20px 40px -18px rgba(15,31,22,0.5); display:flex; flex-direction:column; align-items:center; }
 .compass-wrap{ position:relative; width:min(72vw,270px); height:min(72vw,270px); margin:12px 0 22px; z-index:1; }
-.ring{ position:absolute; inset:0; border-radius:50%; background:rgba(244,241,230,0.04); box-shadow: 0 0 0 1px rgba(212,162,78,0.35), inset 0 0 0 6px rgba(244,241,230,0.04); }
-.tick{ position:absolute; left:50%; top:50%; width:2px; height:10px; background:rgba(244,241,230,0.3); transform-origin:50% 125px; }
-.tick.major{ height:16px; width:2.5px; background:rgba(244,241,230,0.55); }
-.dir-label{ position:absolute; font-size:12px; font-weight:700; color:var(--cream); letter-spacing:0.05em; }
-.n{ top:16px; left:50%; transform:translateX(-50%); color:var(--gold-soft); }
-.e{ top:50%; right:12px; transform:translateY(-50%); }
-.s{ bottom:16px; left:50%; transform:translateX(-50%); }
-.w{ top:50%; left:12px; transform:translateY(-50%); }
-.needle{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(0deg); transition:transform 0.4s cubic-bezier(.2,.7,.3,1); }
-.needle .arrow{ position:absolute; left:-12px; top:-98px; width:24px; height:196px; }
-.kaaba{ position:absolute; left:50%; top:50%; width:24px;height:24px; transform:translate(-50%,-50%); background:linear-gradient(160deg,#1b1b1b,#000); border:2px solid var(--gold); border-radius:3px; box-shadow:0 0 12px rgba(212,162,78,0.5); z-index:5; display:flex; align-items:center; justify-content:center; font-size:10px; }
+.compass-svg{ width:100%; height:100%; display:block; overflow:visible; }
+.compass-svg g{ transition:transform 0.4s cubic-bezier(.2,.7,.3,1); transform:rotate(0deg); }
+.dir-label-svg{ fill:var(--cream); font-size:13px; font-weight:700; font-family:'Inter',sans-serif; }
+.dir-label-svg.n{ fill:var(--gold-soft); }
 .angle{ font-family:'Amiri',serif; font-size:40px; color:var(--cream); z-index:1; line-height:1; }
 .angle span{ font-size:18px; color:var(--gold); font-weight:700; }
 .status{ font-size:13px; color:var(--muted-on-dark); margin-top:6px; z-index:1; min-height:18px; }
