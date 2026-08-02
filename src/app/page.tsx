@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { getPrayerTimes, formatTime } from '../lib/prayertimes';
 
 // BAHARU: Bismillah sebagai ARRAY perkataan (bukan satu string) — elak
 // pemecahan ikut ruang yang boleh musnahkan tag <tajweed class="..."> sendiri
@@ -155,6 +156,116 @@ function MushafLine({
           />
         );
       })}
+    </div>
+  );
+}
+
+
+// BAHARU: Kad Waktu Azan + Arah Kiblat (letak sebelum hero 30 Juzuk)
+function AzanCard() {
+  const [times, setTimes] = useState<{ fajr: number; dhuhr: number; asr: number; maghrib: number; isha: number } | null>(null);
+  const [now, setNow] = useState(new Date());
+  const [locLabel, setLocLabel] = useState('Mengesan lokasi…');
+  const [coords, setCoords] = useState<{ lat: number; lng: number; tz: number } | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocLabel('KUALA LUMPUR');
+      setCoords({ lat: 3.139, lng: 101.6869, tz: 8 });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const tz = -new Date().getTimezoneOffset() / 60;
+        setCoords({ lat: latitude, lng: longitude, tz });
+        fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ms`)
+          .then((r) => r.json())
+          .then((d) => setLocLabel((d.city || d.locality || d.principalSubdivision || 'Lokasi Anda').toUpperCase()))
+          .catch(() => setLocLabel('LOKASI ANDA'));
+      },
+      () => {
+        setLocLabel('KUALA LUMPUR');
+        setCoords({ lat: 3.139, lng: 101.6869, tz: 8 });
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!coords) return;
+    const tick = () => {
+      const d = new Date();
+      setNow(d);
+      setTimes(getPrayerTimes(d, coords.lat, coords.lng, coords.tz));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [coords]);
+
+  const order: ('fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha')[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+  const labels: Record<string, string> = { fajr: 'Subuh', dhuhr: 'Zohor', asr: 'Asar', maghrib: 'Maghrib', isha: 'Isyak' };
+  const shortLabels: Record<string, string> = { fajr: 'SBH', dhuhr: 'DZH', asr: 'ASH', maghrib: 'MAG', isha: 'ISY' };
+
+  const nowHours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+  let nextKey: 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha' = 'fajr';
+  let countdownText = '--:--:-- lagi';
+
+  if (times) {
+    const found = order.find((k) => times[k] > nowHours);
+    nextKey = found || 'fajr';
+    let diff = times[nextKey] - nowHours;
+    if (diff < 0) diff += 24;
+    const hh = Math.floor(diff);
+    const mm = Math.floor((diff - hh) * 60);
+    const ss = Math.floor((((diff - hh) * 60) - mm) * 60);
+    countdownText = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')} lagi`;
+  }
+
+  return (
+    <div className="azan-card-wrap">
+      <style>{`
+        .azan-card-wrap{ max-width:480px; margin:16px auto; }
+        .azan-loc{ font-size:11px; font-weight:700; letter-spacing:0.14em; color:#d4a24e; text-transform:uppercase; margin-bottom:8px; }
+        .azan-card{ background:linear-gradient(165deg, #0f1f16, #16281d); border-radius:22px; padding:20px 18px 16px; position:relative; overflow:hidden; box-shadow:0 16px 32px -16px rgba(15,31,22,0.5); }
+        .azan-next-label{ font-size:11px; font-weight:700; letter-spacing:0.16em; color:#d4a24e; text-transform:uppercase; }
+        .azan-next-time{ font-family:Georgia,serif; font-size:42px; color:#f4f1e6; margin:2px 0; }
+        .azan-countdown{ font-size:12px; color:#8fa196; margin-bottom:14px; }
+        .azan-kiblat{ background:rgba(244,241,230,0.06); border:1px solid rgba(244,241,230,0.1); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; text-decoration:none; margin-bottom:14px; }
+        .azan-kiblat-icon{ width:34px;height:34px; border-radius:9px; background:rgba(212,162,78,0.15); display:flex;align-items:center;justify-content:center; font-size:16px; flex-shrink:0; }
+        .azan-kiblat-eyebrow{ font-size:10px; font-weight:700; letter-spacing:0.12em; color:#8fa196; text-transform:uppercase; }
+        .azan-kiblat-title{ font-size:14px; font-weight:600; color:#f4f1e6; }
+        .azan-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+        .azan-pill{ background:rgba(244,241,230,0.05); border:1px solid rgba(244,241,230,0.08); border-radius:12px; padding:8px 2px; text-align:center; }
+        .azan-pill.active{ background:rgba(212,162,78,0.14); border-color:#d4a24e; }
+        .azan-pname{ font-size:9px; font-weight:700; color:#8fa196; }
+        .azan-pill.active .azan-pname{ color:#e6c07f; }
+        .azan-ptime{ font-size:12px; font-weight:700; color:#f4f1e6; margin-top:3px; }
+        .azan-pill.active .azan-ptime{ color:#d4a24e; }
+      `}</style>
+      <div className="azan-loc">📍 {locLabel}</div>
+      <div className="azan-card">
+        <div className="azan-next-label">SELANJUTNYA · {labels[nextKey].toUpperCase()}</div>
+        <div className="azan-next-time">{times ? formatTime(times[nextKey]) : '--:--'}</div>
+        <div className="azan-countdown">{countdownText}</div>
+
+        <a className="azan-kiblat" href="/kiblat">
+          <div className="azan-kiblat-icon">🧭</div>
+          <div>
+            <div className="azan-kiblat-eyebrow">Arah Kiblat</div>
+            <div className="azan-kiblat-title">Buka Kompas</div>
+          </div>
+        </a>
+
+        <div className="azan-row">
+          {order.map((k) => (
+            <div key={k} className={`azan-pill${k === nextKey ? ' active' : ''}`}>
+              <div className="azan-pname">{shortLabels[k]}</div>
+              <div className="azan-ptime">{times ? formatTime(times[k]) : '--:--'}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1149,6 +1260,8 @@ export default function Home() {
         )}
       </div>
 
+      <AzanCard />
+
       <h1
         style={{ color: '#0f766e', textAlign: 'center', cursor: 'pointer', fontWeight: '700', fontSize: '32px', marginBottom: '5px' }}
         onClick={() => { setSelectedSurah(null); setMushafMode(false); }}
@@ -1503,12 +1616,7 @@ export default function Home() {
             style={{ fontSize: '13px', color: theme.accent, fontWeight: 600, textDecoration: 'none' }}
           >
             🕌 Jamazan — Jam Waktu Solat untuk Masjid (Skrin TV) →
-          </a><a
-  href="/kiblat"
-  style={{ fontSize: '13px', color: theme.accent, fontWeight: 600, textDecoration: 'none', display: 'block', marginTop: '8px' }}
->
-  🧭 Arah Kiblat →
-</a>
+          </a>
         </div>
       )}
     </div>
