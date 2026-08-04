@@ -188,8 +188,7 @@ function AzanCard() {
         const res = await fetch(`/api/azan?lat=${lat}&long=${lng}`);
         if (!res.ok) throw new Error('request gagal');
         const data = await res.json();
-        const district = (data.district || '').split(',')[0]?.trim();
-        const label = (district || data.state || 'Lokasi Anda').toUpperCase();
+        const label = data.locLabel || data.state || 'Lokasi Anda';
         setLocLabel(label);
         if (data.times) {
           setTimes(data.times);
