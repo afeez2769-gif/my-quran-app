@@ -185,20 +185,17 @@ function AzanCard() {
 
     async function loadOfficialTimes(lat: number, lng: number) {
       try {
-        const zoneRes = await fetch(`https://api.waktusolat.app/zones/gps?lat=${lat}&long=${lng}`);
-        const zoneData = await zoneRes.json();
-        const zone = zoneData.zone;
-        const district = (zoneData.district || '').split(',')[0]?.trim();
-        const label = (district || zoneData.state || 'Lokasi Anda').toUpperCase();
+        const res = await fetch(`/api/azan?lat=${lat}&long=${lng}`);
+        if (!res.ok) throw new Error('request gagal');
+        const data = await res.json();
+        const district = (data.district || '').split(',')[0]?.trim();
+        const label = (district || data.state || 'Lokasi Anda').toUpperCase();
         setLocLabel(label);
-
-        const solatRes = await fetch(`https://api.waktusolat.app/v2/solat/${zone}`);
-        const solatData = await solatRes.json();
-        const today = new Date().getDate();
-        const entry = solatData.prayers.find((p: any) => p.day === today);
-        if (entry) {
-          setTimes(entry);
-          localStorage.setItem('azan_cache', JSON.stringify({ dateKey: todayKey, times: entry, locLabel: label }));
+        if (data.times) {
+          setTimes(data.times);
+          localStorage.setItem('azan_cache', JSON.stringify({ dateKey: todayKey, times: data.times, locLabel: label }));
+        } else {
+          setLocLabel('Waktu solat tiada untuk zon ini');
         }
       } catch {
         setLocLabel('Gagal muat waktu solat');
