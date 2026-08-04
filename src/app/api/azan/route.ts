@@ -17,16 +17,24 @@ export async function GET(req: NextRequest) {
       next: { revalidate: 3600 }, // cache zon 1 jam — zon lokasi jarang berubah
     });
     if (!zoneRes.ok) {
-      return NextResponse.json({ error: 'Zon tidak dijumpai untuk lokasi ini' }, { status: 404 });
+      const detail = await zoneRes.text().catch(() => '');
+      return NextResponse.json({ error: 'Zon tidak dijumpai untuk lokasi ini', status: zoneRes.status, detail }, { status: 404 });
     }
     const zoneData = await zoneRes.json();
     const zone = zoneData.zone as string;
+    if (!zone) {
+      return NextResponse.json({ error: 'Respons zon tidak lengkap', zoneData }, { status: 502 });
+    }
 
     const solatRes = await fetch(`https://api.waktusolat.app/v2/solat/${zone}`, {
       next: { revalidate: 3600 * 6 }, // cache jadual bulanan 6 jam
     });
     if (!solatRes.ok) {
-      return NextResponse.json({ error: 'Jadual waktu solat tidak dijumpai untuk zon ini' }, { status: 404 });
+      const detail = await solatRes.text().catch(() => '');
+      return NextResponse.json(
+        { error: 'Jadual waktu solat tidak dijumpai untuk zon ini', zone, status: solatRes.status, detail },
+        { status: 404 }
+      );
     }
     const solatData = await solatRes.json();
 
