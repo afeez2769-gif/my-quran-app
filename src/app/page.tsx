@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { getPrayerTimes, formatTime } from '../lib/prayertimes';
 
 // BAHARU: Bismillah sebagai ARRAY perkataan (bukan satu string) — elak
 // pemecahan ikut ruang yang boleh musnahkan tag <tajweed class="..."> sendiri
@@ -163,62 +162,86 @@ function MushafLine({
 
 // BAHARU: Kad Waktu Azan + Arah Kiblat (letak sebelum hero 30 Juzuk)
 function AzanCard() {
-  const [times, setTimes] = useState<{ fajr: number; dhuhr: number; asr: number; maghrib: number; isha: number } | null>(null);
+  // Waktu solat rasmi terus dari JAKIM (api.waktusolat.app) — bukan kiraan astronomi sendiri,
+  // supaya sentiasa padan 100% dengan jadual rasmi ikut zon.
+  type OfficialTimes = { fajr: number; syuruk: number; dhuhr: number; asr: number; maghrib: number; isha: number };
+  const [times, setTimes] = useState<OfficialTimes | null>(null);
   const [now, setNow] = useState(new Date());
   const [locLabel, setLocLabel] = useState('Mengesan lokasi…');
-  const [coords, setCoords] = useState<{ lat: number; lng: number; tz: number } | null>(null);
 
   useEffect(() => {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const cachedRaw = localStorage.getItem('azan_cache');
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw);
+        if (cached.dateKey === todayKey) {
+          setTimes(cached.times);
+          setLocLabel(cached.locLabel);
+          return; // guna cache hari ini, jimat panggilan API
+        }
+      } catch {}
+    }
+
+    async function loadOfficialTimes(lat: number, lng: number) {
+      try {
+        const zoneRes = await fetch(`https://api.waktusolat.app/zones/gps?lat=${lat}&long=${lng}`);
+        const zoneData = await zoneRes.json();
+        const zone = zoneData.zone;
+        const district = (zoneData.district || '').split(',')[0]?.trim();
+        const label = (district || zoneData.state || 'Lokasi Anda').toUpperCase();
+        setLocLabel(label);
+
+        const solatRes = await fetch(`https://api.waktusolat.app/v2/solat/${zone}`);
+        const solatData = await solatRes.json();
+        const today = new Date().getDate();
+        const entry = solatData.prayers.find((p: any) => p.day === today);
+        if (entry) {
+          setTimes(entry);
+          localStorage.setItem('azan_cache', JSON.stringify({ dateKey: todayKey, times: entry, locLabel: label }));
+        }
+      } catch {
+        setLocLabel('Gagal muat waktu solat');
+      }
+    }
+
     if (!navigator.geolocation) {
-      setLocLabel('KUALA LUMPUR');
-      setCoords({ lat: 3.139, lng: 101.6869, tz: 8 });
+      loadOfficialTimes(3.139, 101.6869); // fallback Kuala Lumpur
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const tz = -new Date().getTimezoneOffset() / 60;
-        setCoords({ lat: latitude, lng: longitude, tz });
-        fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ms`)
-          .then((r) => r.json())
-          .then((d) => setLocLabel((d.city || d.locality || d.principalSubdivision || 'Lokasi Anda').toUpperCase()))
-          .catch(() => setLocLabel('LOKASI ANDA'));
-      },
-      () => {
-        setLocLabel('KUALA LUMPUR');
-        setCoords({ lat: 3.139, lng: 101.6869, tz: 8 });
-      }
+      (pos) => loadOfficialTimes(pos.coords.latitude, pos.coords.longitude),
+      () => loadOfficialTimes(3.139, 101.6869)
     );
   }, []);
 
   useEffect(() => {
-    if (!coords) return;
-    const tick = () => {
-      const d = new Date();
-      setNow(d);
-      setTimes(getPrayerTimes(d, coords.lat, coords.lng, coords.tz));
-    };
-    tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, [coords]);
+  }, []);
 
   const order: ('fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha')[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
   const labels: Record<string, string> = { fajr: 'Subuh', dhuhr: 'Zohor', asr: 'Asar', maghrib: 'Maghrib', isha: 'Isyak' };
   const shortLabels: Record<string, string> = { fajr: 'SBH', dhuhr: 'DZH', asr: 'ASH', maghrib: 'MAG', isha: 'ISY' };
 
-  const nowHours = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+  function fmtEpoch(epochSeconds: number): string {
+    return new Date(epochSeconds * 1000)
+      .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      .replace(' ', '');
+  }
+
+  const nowSeconds = Math.floor(now.getTime() / 1000);
   let nextKey: 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha' = 'fajr';
   let countdownText = '--:--:-- lagi';
 
   if (times) {
-    const found = order.find((k) => times[k] > nowHours);
+    const found = order.find((k) => times[k] > nowSeconds);
     nextKey = found || 'fajr';
-    let diff = times[nextKey] - nowHours;
-    if (diff < 0) diff += 24;
-    const hh = Math.floor(diff);
-    const mm = Math.floor((diff - hh) * 60);
-    const ss = Math.floor((((diff - hh) * 60) - mm) * 60);
+    let diff = times[nextKey] - nowSeconds;
+    if (diff < 0) diff += 86400;
+    const hh = Math.floor(diff / 3600);
+    const mm = Math.floor((diff % 3600) / 60);
+    const ss = Math.floor(diff % 60);
     countdownText = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')} lagi`;
   }
 
@@ -254,7 +277,7 @@ function AzanCard() {
         <div className="azan-top-row">
           <div className="azan-time-col">
             <div className="azan-next-label">SELANJUTNYA · {labels[nextKey].toUpperCase()}</div>
-            <div className="azan-next-time">{times ? formatTime(times[nextKey]) : '--:--'}</div>
+            <div className="azan-next-time">{times ? fmtEpoch(times[nextKey]) : '--:--'}</div>
             <div className="azan-countdown">{countdownText}</div>
           </div>
 
@@ -271,7 +294,7 @@ function AzanCard() {
           {order.map((k) => (
             <div key={k} className={`azan-pill${k === nextKey ? ' active' : ''}`}>
               <div className="azan-pname">{shortLabels[k]}</div>
-              <div className="azan-ptime">{times ? formatTime(times[k]) : '--:--'}</div>
+              <div className="azan-ptime">{times ? fmtEpoch(times[k]) : '--:--'}</div>
             </div>
           ))}
         </div>
